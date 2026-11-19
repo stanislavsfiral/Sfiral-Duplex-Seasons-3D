@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сфираль и Времена Года — Интерактивный 3D-тур</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #060911;
+            color: #e2e8f0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        #canvasContainer {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* Верхняя панель управления */
+        #topBar {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            background: rgba(11, 17, 30, 0.88);
+            border: 1px solid #1e3154;
+            padding: 8px 14px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65);
+        }
+        .mode-btn {
+            background: #131e36;
+            color: #94a3b8;
+            border: 1px solid #263d66;
+            padding: 7px 14px;
+            border-radius: 7px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-btn:hover { border-color: #00e5ff; color: #fff; }
+        .mode-btn.active {
+            background: linear-gradient(135deg, #00e5ff 0%, #00b8d4 100%);
+            color: #060911;
+            border-color: #00e5ff;
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.45);
+        }
+        .tour-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #04130d;
+            border: none;
+            padding: 7px 15px;
+            border-radius: 7px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
+        }
+        .tour-btn:hover { filter: brightness(1.1); }
+        .tour-btn.playing {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: #140c02;
+            box-shadow: 0 0 14px rgba(251, 191, 36, 0.4);
+        }
+        .util-btn {
+            background: #14223b;
+            color: #cbd5e1;
+            border: 1px solid #263d66;
+            padding: 7px 11px;
+            border-radius: 7px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .util-btn:hover { border-color: #00e5ff; color: #fff; }
+
+        /* Боковые сворачиваемые панели */
+        .side-panel {
+            position: fixed;
+            top: 72px;
+            bottom: 92px;
+            width: 310px;
+            z-index: 25;
+            background: rgba(11, 16, 29, 0.88);
+            border: 1px solid #1d2f4f;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.25s ease, opacity 0.25s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+        }
+        #leftPanel { left: 14px; }
+        #rightPanel { right: 14px; }
+        #leftPanel.collapsed { transform: translateX(-340px); pointer-events: none; opacity: 0; }
+        #rightPanel.collapsed { transform: translateX(340px); pointer-events: none; opacity: 0; }
+
+        .panel-toggle-tab {
+            position: fixed;
+            top: 72px;
+            z-index: 28;
+            background: rgba(14, 22, 38, 0.92);
+            color: #00e5ff;
+            border: 1px solid #264170;
+            padding: 7px 12px;
+            border-radius: 8px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+        }
+        .panel-toggle-tab:hover { background: #00e5ff; color: #060911; }
+        #toggleLeftTab { left: 14px; display: none; }
+        #toggleRightTab { right: 14px; display: none; }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 14px;
+            border-bottom: 1px solid #1a2a47;
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: #00e5ff;
+        }
+        .collapse-btn {
+            background: #172542;
+            color: #94a3b8;
+            border: 1px solid #283f6b;
+            border-radius: 5px;
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .collapse-btn:hover { color: #fff; border-color: #00e5ff; }
+
+        .panel-body {
+            padding: 12px 14px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .panel-body::-webkit-scrollbar { width: 5px; }
+        .panel-body::-webkit-scrollbar-thumb { background: #233861; border-radius: 4px; }
+
+        /* Карточки простого объяснения */
+        .story-card {
+            background: rgba(18, 27, 48, 0.85);
+            border: 1px solid #23375e;
+            border-left: 3px solid #00e5ff;
+            border-radius: 8px;
+            padding: 11px 12px;
+        }
+        .story-card h4 {
+            font-size: 0.8rem;
+            color: #00ffaa;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .story-card p {
+            font-size: 0.76rem;
+            line-height: 1.48;
+            color: #cbd5e1;
+        }
+        .cam-btn {
+            background: #1a2d52;
+            color: #ffee00;
+            border: 1px solid #4d4822;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            cursor: pointer;
+        }
+        .cam-btn:hover { background: #ffee00; color: #060911; }
+
+        /* Элементы управления */
+        .ctrl-group {
+            background: rgba(16, 24, 42, 0.75);
+            border: 1px solid #1e3052;
+            border-radius: 8px;
+            padding: 10px 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .ctrl-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #93c5fd;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .slider-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.74rem;
+            color: #cbd5e1;
+        }
+        input[type="range"] {
+            width: 100%;
+            accent-color: #00e5ff;
+            cursor: pointer;
+        }
+        .preset-row {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        .mini-btn {
+            flex: 1;
+            background: #182747;
+            color: #cbd5e1;
+            border: 1px solid #2b4475;
+            padding: 4px 6px;
+            border-radius: 5px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            text-align: center;
+        }
+        .mini-btn:hover, .mini-btn.active {
+            background: #00e5ff;
+            color: #060911;
+            border-color: #00e5ff;
+            font-weight: 700;
+        }
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+        }
+        .switch-btn {
+            background: #132c2b;
+            color: #00ffaa;
+            border: 1px solid #00ffaa;
+            padding: 2px 9px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .switch-btn.off {
+            background: #2b181d;
+            color: #f87171;
+            border-color: #f87171;
+        }
+
+        /* Нижняя панель-субтитр и шкала времени */
+        #bottomBar {
+            position: fixed;
+            bottom: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            width: min(860px, calc(100vw - 28px));
+            background: rgba(11, 16, 29, 0.92);
+            border: 1px solid #1e3154;
+            border-radius: 12px;
+            padding: 10px 16px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65);
+        }
+        .subtitle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        #subtitleText {
+            font-size: 0.85rem;
+            line-height: 1.35;
+            color: #f1f5f9;
+        }
+        .season-pills {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .season-pill {
+            padding: 3px 10px;
+            border-radius: 5px;
+            font-size: 0.73rem;
+            font-weight: 700;
+            border: 1px solid transparent;
+            opacity: 0.55;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .season-pill.active { opacity: 1; transform: scale(1.05); }
+
+        /* Чистые 3D-подписи на сцене */
+        .label-3d {
+            position: fixed;
+            z-index: 15;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            background: rgba(8, 13, 24, 0.82);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-left-width: 3px;
+            padding: 5px 11px;
+            border-radius: 8px;
+            font-size: 0.74rem;
+            line-height: 1.25;
+            white-space: nowrap;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+            opacity: 0.72;
+            transition: opacity 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+        }
+        .label-3d strong {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            letter-spacing: 0.02em;
+        }
+        .label-3d .lbl-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .label-3d span {
+            display: block;
+            color: #94a3b8;
+            font-size: 0.67rem;
+            margin-top: 1px;
+        }
+        .label-3d.highlight {
+            opacity: 1 !important;
+            background: rgba(11, 18, 34, 0.94);
+            transform: translate(-50%, -50%) scale(1.09);
+            z-index: 18;
+        }
+        #leaderLinesSvg {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 14;
+        }
+
+        /* Режим чистого экрана для записи видео */
+        body.clean-screen #topBar,
+        body.clean-screen .side-panel,
+        body.clean-screen .panel-toggle-tab,
+        body.clean-screen #bottomBar {
+            display: none !important;
+        }
+        #exitCleanBtn {
+            display: none;
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            z-index: 100;
+            background: rgba(12, 18, 32, 0.8);
+            color: #00e5ff;
+            border: 1px solid #00e5ff;
+            padding: 6px 12px;
+            border-radius: 7px;
+            font-size: 0.76rem;
+            cursor: pointer;
+        }
+        body.clean-screen #exitCleanBtn { display: block; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
+                "three/examples/jsm/controls/OrbitControls.js": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/controls/OrbitControls.js",
+                "three/examples/jsm/postprocessing/EffectComposer.js": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/postprocessing/EffectComposer.js",
+                "three/examples/jsm/postprocessing/RenderPass.js": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/postprocessing/RenderPass.js",
+                "three/examples/jsm/postprocessing/UnrealBloomPass.js": "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/postprocessing/UnrealBloomPass.js"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="canvasContainer"></div>
+
+    <!-- Верхняя панель -->
+    <div id="topBar">
+        <button class="tour-btn playing" id="btnTourToggle">⏸ Пауза тура (Пробел)</button>
+        <button class="mode-btn" id="btnModeSingle">Одна Сфираль</button>
+        <button class="mode-btn active" id="btnModeDuplex">Сфираль-дюплекс</button>
+        <button class="util-btn" id="btnCamFollow">🎥 Следить за сезоном: ВКЛ</button>
+        <button class="util-btn" id="btnCleanScreen">🎬 Чистый экран</button>
+    </div>
+
+    <button id="exitCleanBtn">✕ Вернуть кнопки</button>
+
+    <!-- Ярлыки разворота боковых панелей -->
+    <button class="panel-toggle-tab" id="toggleLeftTab">▶ Как это устроено</button>
+    <button class="panel-toggle-tab" id="toggleRightTab">◀ Настройки вида</button>
+
+    <!-- Левая панель: простое объяснение без лишних терминов -->
+    <div class="side-panel" id="leftPanel">
+        <div class="panel-head">
+            <span>🧭 Как устроен цикл года</span>
+            <button class="collapse-btn" id="collapseLeftBtn" title="Свернуть">◀</button>
+        </div>
+        <div class="panel-body">
+            <div class="story-card">
+                <h4>
+                    <span>1. Что такое Сфираль?</span>
+                    <button class="cam-btn" data-cam="iso">3D-вид</button>
+                </h4>
+                <p>
+                    Это объемная форма из двух зеркальных витков, соединенных в центре плавной <b>S-петлей</b>. В ней нет резких углов: движение плавно скручивается в одну сторону, проходит через центр и разворачивается в противоположную.
+                </p>
+            </div>
+
+            <div class="story-card" style="border-left-color:#ffee00;">
+                <h4>
+                    <span>2. Почему здесь две Сфирали?</span>
+                    <button class="cam-btn" data-cam="top">Вид сверху</button>
+                </h4>
+                <p>
+                    Одна Сфираль задает два крайних полюса года — <b>Зиму</b> и <b>Лето</b>. Вторая Сфираль встает перпендикулярно первой и раскрывает два переходных сезона — <b>Весну</b> и <b>Осень</b>. Вместе они образуют 4 лепестка времени.
+                </p>
+            </div>
+
+            <div class="story-card" style="border-left-color:#00ffaa;">
+                <h4>
+                    <span>3. Как происходит смена сезона?</span>
+                    <button class="cam-btn" data-cam="side">Вид сбоку</button>
+                </h4>
+                <p>
+                    Свет не перепрыгивает по внешним краям. Чтобы сменить время года, поток из активного витка <b>стягивается в центральную S-петлю</b>, меняет направление на 90° (как в гироскопе) и перетекает в следующий сезон: <b>Зима → Весна → Лето → Осень</b>.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая панель: настройки сцены -->
+    <div class="side-panel" id="rightPanel">
+        <div class="panel-head">
+            <span>⚙️ Настройки сцены</span>
+            <button class="collapse-btn" id="collapseRightBtn" title="Свернуть">▶</button>
+        </div>
+        <div class="panel-body">
+                        <div class="ctrl-group">
+                <div class="ctrl-title">Скорость и вращение</div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Скорость течения года</span>
+                        <strong id="valSpeed">0.8×</strong>
+                    </div>
+                    <input type="range" id="rngSpeed" min="0.1" max="2.0" step="0.1" value="0.8">
+                </div>
+                <div class="preset-row">
+                    <button class="mini-btn active" data-rot="off">Без вращения</button>
+                    <button class="mini-btn" data-rot="y">Вращать Y</button>
+                    <button class="mini-btn" data-rot="3d">3D-облет</button>
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-title">Свет и прозрачность</div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Толщина линий</span>
+                        <strong id="valTube">0.5</strong>
+                    </div>
+                    <input type="range" id="rngTube" min="0.15" max="2.0" step="0.05" value="0.5">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Свечение</span>
+                        <strong id="valBloom">0.45</strong>
+                    </div>
+                    <input type="range" id="rngBloom" min="0" max="1.5" step="0.05" value="0.45">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Стеклянная оболочка</span>
+                        <strong id="valGlass">50%</strong>
+                    </div>
+                    <input type="range" id="rngGlass" min="0" max="50" step="5" value="50">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Цвета характеристик</span>
+                        <strong id="valColorMode">4 сезона</strong>
+                    </div>
+                    <div class="preset-row">
+                        <button class="mini-btn active" data-colormode="seasons4">4 сезона</button>
+                        <button class="mini-btn" data-colormode="poles2">2 полюса (N/S)</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-title">Подсказки в 3D</div>
+                <div class="toggle-row">
+                    <span>Названия сезонов</span>
+                    <button class="switch-btn" id="tglLabels">ВКЛ</button>
+                </div>
+                <div class="toggle-row">
+                    <span>Линза и ось активного сезона</span>
+                    <button class="switch-btn off" id="tglPlane">ВЫКЛ</button>
+                </div>
+                <div class="toggle-row">
+                    <span>Центральный узел перехода</span>
+                    <button class="switch-btn" id="tglCore">ВКЛ</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Нижняя панель: субтитр и шкала года -->
+    <div id="bottomBar">
+        <div class="subtitle-row">
+            <div id="subtitleText">
+                <strong style="color:#38bdf8;">1. ЗИМА:</strong> Энергия собрана в первом витке.
+            </div>
+            <div class="season-pills">
+                <span class="season-pill active" data-jump="0.12" style="background:rgba(248,250,252,0.14); color:#f8fafc; border-color:#f8fafc;">1. Зима</span>
+                <span class="season-pill" data-jump="0.37" style="background:rgba(239,68,68,0.16); color:#ef4444; border-color:#ef4444;">2. Весна</span>
+                <span class="season-pill" data-jump="0.62" style="background:rgba(34,197,94,0.16); color:#22c55e; border-color:#22c55e;">3. Лето</span>
+                <span class="season-pill" data-jump="0.87" style="background:rgba(234,179,8,0.16); color:#eab308; border-color:#eab308;">4. Осень</span>
+            </div>
+        </div>
+        <input type="range" id="rngTimeline" min="0" max="1" step="0.001" value="0.06">
+    </div>
+
+    <!-- Слой выносок и 3D-подписей -->
+    <svg id="leaderLinesSvg"></svg>
+    <div id="labelsLayer"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+
+        // =========================================================================
+        // 1. ГЕОМЕТРИЯ СФИРАЛИ (КАНОНИЧЕСКАЯ ФОРМА ИЗ КОНСТРУКТОРА)
+        // =========================================================================
+        const SQUARE_STRETCH = 0.7778;
+
+        function generateRightBranch(R, H) {
+            const mainPts = [];
+            const junctionZ = H / 5;
+            for (let i = 0; i <= 100; i++) {
+                const t = i / 100;
+                const angle = 2 * Math.PI * t;
+                mainPts.push(new THREE.Vector3(
+                    R * Math.cos(angle),
+                    R * Math.sin(angle),
+                    junctionZ + (H - junctionZ) * (1 - t)
+                ));
+            }
+            const sPts = [];
+            const r_s = R / 2;
+            for (let i = 0; i <= 60; i++) {
+                const t = i / 60;
+                const angle = Math.PI * t;
+                sPts.push(new THREE.Vector3(
+                    r_s + r_s * Math.cos(angle),
+                    r_s * Math.sin(angle),
+                    junctionZ * (1 - t)
+                ));
+            }
+            return { mainPts, sPts };
+        }
+
+        function buildSfiralSegments(nodeSpec, stretch) {
+            const p = nodeSpec.params || {};
+            const N = p.N || 5;
+            const sc = p.scale !== undefined ? p.scale : 1.0;
+            const R = (60 + N * 2) * sc;
+            const H = (80 + N * 2) * sc;
+            const branch = generateRightBranch(R, H);
+
+            const scaleVec = (pt, inv = 1) => new THREE.Vector3(pt.x * inv, pt.y * inv, pt.z * inv * stretch);
+            return {
+                rightPts: branch.mainPts.map(pt => scaleVec(pt, 1)),
+                sRightPts: branch.sPts.map(pt => scaleVec(pt, 1)),
+                leftPts: branch.mainPts.map(pt => scaleVec(pt, -1)),
+                sLeftPts: branch.sPts.map(pt => scaleVec(pt, -1)),
+                R
+            };
+        }
+
+        // =========================================================================
+        // 2. СОСТОЯНИЕ ПРИЛОЖЕНИЯ
+        // =========================================================================
+        const SINGLE_NODES = [
+            { id: 1, x: 0, y: 0, z: 0, params: { N: 5, scale: 1.0, stretch: 0.7778, angles: [0, 0, 0] } }
+        ];
+        const DUPLEX_NODES = [
+            { id: 1, x: 0, y: 0, z: 0, params: { N: 5, scale: 1.0, stretch: 0.7778, angles: [0, 0, 0] } },
+            { id: 2, x: 0, y: 0, z: 0, params: { N: 5, scale: 1.0, stretch: 0.7778, angles: [180, 90, 0] } }
+        ];
+
+        const state = {
+            mode: 'duplex',
+            nodes: JSON.parse(JSON.stringify(DUPLEX_NODES)),
+            playing: true,
+            camFollow: true,
+            speed: 0.8,
+            t: 0.06,
+            stretch: 0.7778,
+            autoRotate: 'off',
+            colorMode: 'seasons4', // 'seasons4' | 'poles2'
+            tubeRadius: 0.5,
+            bloomStrength: 0.45,
+            glassOpacity: 0.5,
+            showLabels: true,
+            showPlane: false,
+            showCore: true
+        };
+
+        // =========================================================================
+        // 3. СЦЕНА THREE.JS
+        // =========================================================================
+        const container = document.getElementById('canvasContainer');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x060911, 0.0011);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 4000);
+        camera.position.set(45, 55, 240);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.07;
+        controls.target.set(0, 0, 0);
+
+        // Если пользователь начинает крутить камеру вручную — отключаем авто-слежение камеры, чтобы не мешать
+        controls.addEventListener('start', () => {
+            if (state.camFollow) {
+                state.camFollow = false;
+                updateCamFollowBtn();
+            }
+        });
+
+        const composer = new EffectComposer(renderer);
+        composer.addPass(new RenderPass(scene, camera));
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            state.bloomStrength,
+            0.55,
+            0.18
+        );
+        composer.addPass(bloomPass);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
+        dirLight.position.set(140, 200, 180);
+        scene.add(dirLight);
+
+
+
+        const modelRoot = new THREE.Group();
+        scene.add(modelRoot);
+
+        // Линза активной плоскости со встроенной осью (показывает плоскость и ось текущего сезона)
+        const activePlaneGroup = new THREE.Group();
+
+        // 1. Внешний ободок линзы (деликатный, полупрозрачный)
+        const ringGeo = new THREE.RingGeometry(82.0, 82.9, 96);
+        const ringMat = new THREE.MeshBasicMaterial({
+            color: 0x38bdf8,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.16,
+            depthWrite: false
+        });
+        const activePlaneRing = new THREE.Mesh(ringGeo, ringMat);
+
+        // 2. Полупрозрачное стекло самой линзы
+        const discGeo = new THREE.CircleGeometry(82.0, 96);
+        const discMat = new THREE.MeshBasicMaterial({
+            color: 0x38bdf8,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.018,
+            depthWrite: false
+        });
+        const activePlaneDisc = new THREE.Mesh(discGeo, discMat);
+
+        // 3. Ось активного сезона под 90° к плоскости линзы (вдоль нормали Z)
+        const axisGroup = new THREE.Group();
+        const axisMat = new THREE.MeshBasicMaterial({
+            color: 0x38bdf8,
+            transparent: true,
+            opacity: 0.34,
+            depthWrite: false
+        });
+        const crossAxisMat = new THREE.MeshBasicMaterial({
+            color: 0x38bdf8,
+            transparent: true,
+            opacity: 0.10,
+            depthWrite: false
+        });
+
+        // Главная ось строго под 90° относительно плоскости линзы (вдоль оси Z)
+        const normalAxisRod = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.75, 0.75, 168, 14),
+            axisMat
+        );
+        normalAxisRod.rotation.x = Math.PI / 2;
+
+        // Наконечники-конусы на обоих концах оси, перпендикулярной линзе
+        const tipFront = new THREE.Mesh(new THREE.ConeGeometry(2.5, 7.5, 16), axisMat);
+        tipFront.position.z = 86;
+        tipFront.rotation.x = Math.PI / 2;
+
+        const tipBack = new THREE.Mesh(new THREE.ConeGeometry(2.5, 7.5, 16), axisMat);
+        tipBack.position.z = -86;
+        tipBack.rotation.x = -Math.PI / 2;
+
+        // Тонкие направляющие диаметры в самой плоскости линзы
+        const mainAxisRod = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.32, 0.32, 163, 10),
+            crossAxisMat
+        );
+        const crossAxisRod = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.32, 0.32, 163, 10),
+            crossAxisMat
+        );
+        crossAxisRod.rotation.z = Math.PI / 2;
+
+        axisGroup.add(normalAxisRod, tipFront, tipBack, mainAxisRod, crossAxisRod);
+        activePlaneGroup.add(activePlaneRing, activePlaneDisc, axisGroup);
+        scene.add(activePlaneGroup);
+
+        // Центральный узел перехода (0, 0, 0)
+        const coreGroup = new THREE.Group();
+        const coreSphere = new THREE.Mesh(
+            new THREE.SphereGeometry(3.5, 24, 24),
+            new THREE.MeshBasicMaterial({ color: 0x00ffaa })
+        );
+        const coreHalo = new THREE.Mesh(
+            new THREE.SphereGeometry(7.5, 24, 24),
+            new THREE.MeshBasicMaterial({ color: 0x00ffaa, transparent: true, opacity: 0.25 })
+        );
+        coreGroup.add(coreSphere, coreHalo);
+        scene.add(coreGroup);
+
+        // Комета: насыщенная точка-голова и длинный шлейф с плавным растворением хвоста
+        const trailCount = 36;
+        const trailMeshes = [];
+        const trailGroup = new THREE.Group();
+        for (let i = 0; i < trailCount; i++) {
+            const falloff = Math.pow(1 - i / trailCount, 1.85);
+            const radius = i === 0 ? 2.4 : Math.max(0.18, 1.85 * falloff);
+            const m = new THREE.Mesh(
+                new THREE.SphereGeometry(radius, 12, 12),
+                new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: i === 0 ? 1.0 : falloff * 0.72,
+                    depthWrite: false
+                })
+            );
+            trailGroup.add(m);
+            trailMeshes.push({ mesh: m, falloff, index: i });
+        }
+        scene.add(trailGroup);
+
+        // =========================================================================
+        // 4. ПОСТРОЕНИЕ ВОЛНОВОДОВ, СЕЗОННЫХ СЕГМЕНТОВ И ТРАЕКТОРИИ ПОТОКА
+        // =========================================================================
+        let segmentMaterials = {}; // { winter, spring, summer, autumn, s1, s2 }
+        let flowPath = []; // { pos, seasonKey, subtitle, color, planeRotY, camPos }
+        let flowCurve = null;
+        let flowSamples = [];
+        let floatingLabels = []; // { anchorPos, labelPos, title, sub, color, seasonKey }
+        const labelsLayer = document.getElementById('labelsLayer');
+        const leaderLinesSvg = document.getElementById('leaderLinesSvg');
+
+        function makeMidCoilLabelPos(anchorPos, radialScale = 1.14) {
+            const out = anchorPos.clone();
+            out.x *= radialScale;
+            out.y *= radialScale;
+            return out;
+        }
+
+        const PALETTES = {
+            seasons4: {
+                winter: { hex: 0xf8fafc, css: '#f8fafc', name: 'ЗИМА (Белый)' },
+                spring: { hex: 0xef4444, css: '#ef4444', name: 'ВЕСНА (Красный)' },
+                summer: { hex: 0x22c55e, css: '#22c55e', name: 'ЛЕТО (Зелёный)' },
+                autumn: { hex: 0xeab308, css: '#eab308', name: 'ОСЕНЬ (Жёлтый)' }
+            },
+            poles2: {
+                winter: { hex: 0x3b82f6, css: '#3b82f6', name: 'ПОЛЮС S (Синий)' },
+                spring: { hex: 0xef4444, css: '#ef4444', name: 'ПОЛЮС N (Красный)' },
+                summer: { hex: 0xef4444, css: '#ef4444', name: 'ПОЛЮС N (Красный)' },
+                autumn: { hex: 0x3b82f6, css: '#3b82f6', name: 'ПОЛЮС S (Синий)' }
+            }
+        };
+
+        function getSeasonColorInfo(seasonKey) {
+            const pal = PALETTES[state.colorMode] || PALETTES.seasons4;
+            return pal[seasonKey] || pal.winter;
+        }
+
+        function applyColorPaletteToUI() {
+            const w = getSeasonColorInfo('winter');
+            const sp = getSeasonColorInfo('spring');
+            const su = getSeasonColorInfo('summer');
+            const au = getSeasonColorInfo('autumn');
+
+            const pills = document.querySelectorAll('.season-pill');
+            if (pills[0]) { pills[0].style.color = w.css; pills[0].style.borderColor = w.css; pills[0].style.background = 'rgba(248,250,252,0.14)'; }
+            if (pills[1]) { pills[1].style.color = sp.css; pills[1].style.borderColor = sp.css; pills[1].style.background = 'rgba(239,68,68,0.16)'; }
+            if (pills[2]) { pills[2].style.color = su.css; pills[2].style.borderColor = su.css; pills[2].style.background = 'rgba(34,197,94,0.16)'; }
+            if (pills[3]) { pills[3].style.color = au.css; pills[3].style.borderColor = au.css; pills[3].style.background = 'rgba(234,179,8,0.16)'; }
+
+            document.getElementById('valColorMode').textContent = state.colorMode === 'poles2' ? '2 полюса (N/S)' : '4 сезона';
+        }
+
+        function createTube(points, colorHex, radius, glassOpacity) {
+            const curve = new THREE.CatmullRomCurve3(points);
+            const group = new THREE.Group();
+
+            // Чёткий внутренний каркас линии
+            const coreGeo = new THREE.TubeGeometry(curve, Math.max(points.length, 64), radius * 0.72, 10, false);
+            const coreMat = new THREE.MeshBasicMaterial({
+                color: colorHex,
+                transparent: true,
+                opacity: 0.85,
+                depthWrite: false
+            });
+            group.add(new THREE.Mesh(coreGeo, coreMat));
+
+            if (glassOpacity > 0.01) {
+                const glassGeo = new THREE.TubeGeometry(curve, Math.max(points.length, 56), radius * 2.1, 14, false);
+                const glassMat = new THREE.MeshBasicMaterial({
+                    color: colorHex,
+                    transparent: true,
+                    opacity: glassOpacity * 0.55,
+                    depthWrite: false
+                });
+                group.add(new THREE.Mesh(glassGeo, glassMat));
+            }
+            return { group, coreMat };
+        }
+
+        function rebuildScene() {
+            while (modelRoot.children.length > 0) {
+                modelRoot.remove(modelRoot.children[0]);
+            }
+            segmentMaterials = {};
+            flowPath = [];
+            floatingLabels = [];
+
+            const builtNodes = [];
+
+            state.nodes.forEach((nodeSpec, idx) => {
+                const segs = buildSfiralSegments(nodeSpec, state.stretch);
+                const nodeGroup = new THREE.Group();
+                nodeGroup.position.set(nodeSpec.x || 0, nodeSpec.y || 0, nodeSpec.z || 0);
+                const ang = nodeSpec.params?.angles || [0, 0, 0];
+                nodeGroup.rotation.set(
+                    THREE.MathUtils.degToRad(ang[0] || 0),
+                    THREE.MathUtils.degToRad(ang[1] || 0),
+                    THREE.MathUtils.degToRad(ang[2] || 0)
+                );
+
+                const isSingleMode = state.nodes.length === 1;
+                const isFirst = idx === 0;
+                // В режиме "Одна Сфираль": витки = Зима и Лето, полувитки S = Весна и Осень
+                // В режиме "Сфираль-дюплекс": по пол-Сфирали на сезон (I: Зима / Весна, II: Лето / Осень)
+                const cRight = isSingleMode
+                    ? getSeasonColorInfo('winter').hex
+                    : (isFirst ? getSeasonColorInfo('winter').hex : getSeasonColorInfo('summer').hex);
+                const cS1 = isSingleMode
+                    ? getSeasonColorInfo('spring').hex
+                    : cRight;
+                const cLeft = isSingleMode
+                    ? getSeasonColorInfo('summer').hex
+                    : (isFirst ? getSeasonColorInfo('spring').hex : getSeasonColorInfo('autumn').hex);
+                const cS2 = isSingleMode
+                    ? getSeasonColorInfo('autumn').hex
+                    : cLeft;
+
+                const tRight = createTube(segs.rightPts, cRight, state.tubeRadius, state.glassOpacity);
+                const tSRight = createTube(segs.sRightPts, cS1, state.tubeRadius * 0.9, state.glassOpacity);
+                const tSLeft = createTube(segs.sLeftPts, cS2, state.tubeRadius * 0.9, state.glassOpacity);
+                const tLeft = createTube(segs.leftPts, cLeft, state.tubeRadius, state.glassOpacity);
+
+                nodeGroup.add(tRight.group, tSRight.group, tSLeft.group, tLeft.group);
+
+                if (isFirst) {
+                    segmentMaterials.winter = tRight.coreMat;
+                    segmentMaterials.s1 = tSRight.coreMat;
+                    segmentMaterials.spring = tLeft.coreMat;
+                    segmentMaterials.s2 = tSLeft.coreMat;
+                } else {
+                    segmentMaterials.summer = tRight.coreMat;
+                    segmentMaterials.s3 = tSRight.coreMat;
+                    segmentMaterials.autumn = tLeft.coreMat;
+                    segmentMaterials.s4 = tSLeft.coreMat;
+                }
+
+                nodeGroup.updateMatrixWorld(true);
+                const toWorld = (pt) => pt.clone().applyMatrix4(nodeGroup.matrixWorld);
+                builtNodes.push({ segs, toWorld });
+                modelRoot.add(nodeGroup);
+            });
+
+            // Формируем плавный маршрут потока энергии и понятные подписи
+            const cW = getSeasonColorInfo('winter').css;
+            const cSp = getSeasonColorInfo('spring').css;
+            const cSu = getSeasonColorInfo('summer').css;
+            const cAu = getSeasonColorInfo('autumn').css;
+
+            if (builtNodes.length === 1) {
+                const n1 = builtNodes[0];
+                const { rightPts, sRightPts, sLeftPts, leftPts } = n1.segs;
+
+                const pushSingleBridge = (fromPt, toPt, seasonKey, color, camPos, subtitle) => {
+                    const mid = fromPt.clone().lerp(toPt, 0.5);
+                    const bridgeCurve = new THREE.CatmullRomCurve3([fromPt, mid, toPt]);
+                    bridgeCurve.getPoints(16).forEach(p => flowPath.push({
+                        pos: p,
+                        seasonKey,
+                        color,
+                        planeRotY: 0,
+                        camPos,
+                        subtitle
+                    }));
+                };
+
+                // 1. ЗИМА = первый большой виток
+                rightPts.forEach(p => flowPath.push({
+                    pos: n1.toWorld(p),
+                    seasonKey: 'winter',
+                    color: cW,
+                    planeRotY: 0,
+                    camPos: new THREE.Vector3(-45, 45, 235),
+                    subtitle: `<strong style="color:${cW};">1. ЗИМА (Виток 1):</strong> Первый большой виток Сфирали.`
+                }));
+
+                // 2. ВЕСНА = первый полувиток S-петли (к центру 0,0,0)
+                sRightPts.forEach(p => flowPath.push({
+                    pos: n1.toWorld(p),
+                    seasonKey: 'spring',
+                    color: cSp,
+                    planeRotY: 0,
+                    camPos: new THREE.Vector3(0, 35, 215),
+                    subtitle: `<strong style="color:${cSp};">2. ВЕСНА (Полувиток S₁):</strong> Переходный полувиток S-петли к центру.`
+                }));
+
+                // Переход на начало второго большого витка (Лето)
+                pushSingleBridge(
+                    n1.toWorld(sRightPts[sRightPts.length - 1]),
+                    n1.toWorld(leftPts[0]),
+                    'summer',
+                    cSu,
+                    new THREE.Vector3(45, 45, 235),
+                    `<strong style="color:${cSu};">3. ЛЕТО (Виток 2):</strong> Переход на второй большой виток Сфирали.`
+                );
+
+                // 3. ЛЕТО = второй большой виток
+                leftPts.forEach(p => flowPath.push({
+                    pos: n1.toWorld(p),
+                    seasonKey: 'summer',
+                    color: cSu,
+                    planeRotY: 0,
+                    camPos: new THREE.Vector3(45, 45, 235),
+                    subtitle: `<strong style="color:${cSu};">3. ЛЕТО (Виток 2):</strong> Второй зеркальный виток Сфирали.`
+                }));
+
+                // 4. ОСЕНЬ = второй полувиток S-петли (к центру 0,0,0)
+                sLeftPts.forEach(p => flowPath.push({
+                    pos: n1.toWorld(p),
+                    seasonKey: 'autumn',
+                    color: cAu,
+                    planeRotY: 0,
+                    camPos: new THREE.Vector3(0, -35, 215),
+                    subtitle: `<strong style="color:${cAu};">4. ОСЕНЬ (Полувиток S₂):</strong> Второй переходный полувиток S-петли к центру.`
+                }));
+
+                // Замыкание цикла на начало Зимы (Виток 1)
+                pushSingleBridge(
+                    n1.toWorld(sLeftPts[sLeftPts.length - 1]),
+                    n1.toWorld(rightPts[0]),
+                    'winter',
+                    cW,
+                    new THREE.Vector3(-45, 45, 235),
+                    `<strong style="color:${cW};">1. ЗИМА (Виток 1):</strong> Возврат на первый большой виток.`
+                );
+
+                const wAnchor = n1.toWorld(rightPts[50]);
+                const spAnchor = n1.toWorld(sRightPts[30]);
+                const suAnchor = n1.toWorld(leftPts[50]);
+                const auAnchor = n1.toWorld(sLeftPts[30]);
+
+                floatingLabels.push(
+                    { anchorPos: wAnchor, labelPos: makeMidCoilLabelPos(wAnchor, 1.14), title: '1. ЗИМА', sub: 'Большой виток 1', color: cW, seasonKey: 'winter' },
+                    { anchorPos: spAnchor, labelPos: new THREE.Vector3(spAnchor.x * 1.45, spAnchor.y + 22, spAnchor.z), title: '2. ВЕСНА', sub: 'Полувиток S₁', color: cSp, seasonKey: 'spring' },
+                    { anchorPos: suAnchor, labelPos: makeMidCoilLabelPos(suAnchor, 1.14), title: '3. ЛЕТО', sub: 'Большой виток 2', color: cSu, seasonKey: 'summer' },
+                    { anchorPos: auAnchor, labelPos: new THREE.Vector3(auAnchor.x * 1.45, auAnchor.y - 22, auAnchor.z), title: '4. ОСЕНЬ', sub: 'Полувиток S₂', color: cAu, seasonKey: 'autumn' }
+                );
+            } else if (builtNodes.length >= 2) {
+                const n1 = builtNodes[0];
+                const n2 = builtNodes[1];
+
+                const pushBridge = (fromPt, toPt, seasonKey, color, planeRotY, camPos, subtitle) => {
+                    const mid = fromPt.clone().lerp(toPt, 0.5);
+                    const bridgeCurve = new THREE.CatmullRomCurve3([fromPt, mid, toPt]);
+                    bridgeCurve.getPoints(18).forEach(p => flowPath.push({
+                        pos: p,
+                        seasonKey,
+                        color,
+                        planeRotY,
+                        camPos,
+                        subtitle
+                    }));
+                };
+
+                // 1. ЗИМА = 1-я пол-Сфирали I (виток + пол-витка S до центра)
+                n1.segs.rightPts.forEach(p => flowPath.push({
+                    pos: n1.toWorld(p),
+                    seasonKey: 'winter',
+                    color: cW,
+                    planeRotY: 0,
+                    camPos: new THREE.Vector3(35, 45, 235),
+                    subtitle: `<strong style="color:${cW};">1. ЗИМА (1/2 Сфирали I):</strong> Виток + пол-витка S первой Сфирали.`
+                }));
+                n1.segs.sRightPts.forEach(p => flowPath.push({
+                    pos: n1.toWorld(p),
+                    seasonKey: 'winter',
+                    color: cW,
+                    planeRotY: 0,
+                    camPos: new THREE.Vector3(35, 45, 235),
+                    subtitle: `<strong style="color:${cW};">1. ЗИМА → ЦЕНТР (0,0,0):</strong> Вход в центр Сфирали I, смена сезона.`
+                }));
+
+                // 2. ВЕСНА = 2-я пол-Сфирали I (пол-витка S от центра + виток)
+                [...n1.segs.sLeftPts].reverse().forEach(p => flowPath.push({
+                    pos: n1.toWorld(p),
+                    seasonKey: 'spring',
+                    color: cSp,
+                    planeRotY: 0,
+                    camPos: new THREE.Vector3(-40, 55, 235),
+                    subtitle: `<strong style="color:${cSp};">2. ВЕСНА (1/2 Сфирали I):</strong> Пол-витка S от центра + второй виток Сфирали I.`
+                }));
+                [...n1.segs.leftPts].reverse().forEach(p => flowPath.push({
+                    pos: n1.toWorld(p),
+                    seasonKey: 'spring',
+                    color: cSp,
+                    planeRotY: 0,
+                    camPos: new THREE.Vector3(-120, 45, 210),
+                    subtitle: `<strong style="color:${cSp};">2. ВЕСНА (1/2 Сфирали I):</strong> Прохождение второго витка первой Сфирали.`
+                }));
+
+                const endOfN1 = n1.toWorld(n1.segs.leftPts[0]);
+
+                const canonicalN2 = [
+                    ...n2.segs.rightPts.map((p, i) => ({
+                        pos: n2.toWorld(p),
+                        phase: 'turnA',
+                        part: i / Math.max(1, n2.segs.rightPts.length - 1)
+                    })),
+                    ...n2.segs.sRightPts.map((p, i) => ({
+                        pos: n2.toWorld(p),
+                        phase: 'sA',
+                        part: i / Math.max(1, n2.segs.sRightPts.length - 1)
+                    })),
+                    ...[...n2.segs.sLeftPts].reverse().map((p, i) => ({
+                        pos: n2.toWorld(p),
+                        phase: 'sB',
+                        part: i / Math.max(1, n2.segs.sLeftPts.length - 1)
+                    })),
+                    ...[...n2.segs.leftPts].reverse().map((p, i) => ({
+                        pos: n2.toWorld(p),
+                        phase: 'turnB',
+                        part: i / Math.max(1, n2.segs.leftPts.length - 1)
+                    }))
+                ];
+
+                let dockIdxN2 = 0;
+                let bestDistSq = Infinity;
+                canonicalN2.forEach((item, idx) => {
+                    const dSq = item.pos.distanceToSquared(endOfN1);
+                    if (dSq < bestDistSq) {
+                        bestDistSq = dSq;
+                        dockIdxN2 = idx;
+                    }
+                });
+
+                const orderedN2 = canonicalN2.slice(0, dockIdxN2 + 1).reverse();
+
+                if (endOfN1.distanceTo(orderedN2[0].pos) > 0.5) {
+                    pushBridge(
+                        endOfN1,
+                        orderedN2[0].pos,
+                        'summer',
+                        cSu,
+                        Math.PI / 2,
+                        new THREE.Vector3(210, 55, 75),
+                        `<strong style="color:${cSu};">3. ЛЕТО (1/2 Сфирали II):</strong> Переход на первую половину второй Сфирали.`
+                    );
+                }
+
+                // 3. ЛЕТО (1-я пол-Сфирали II: виток + пол-витка S до центра)
+                // и 4. ОСЕНЬ (2-я пол-Сфирали II: пол-витка S от центра + виток)
+                for (let i = 0; i < orderedN2.length; i++) {
+                    const curr = orderedN2[i];
+                    const isSummerHalf = (curr.phase === 'turnA' || curr.phase === 'sA');
+                    const segKey = isSummerHalf ? 'summer' : 'autumn';
+                    const segCss = isSummerHalf ? cSu : cAu;
+                    flowPath.push({
+                        pos: curr.pos,
+                        seasonKey: segKey,
+                        color: segCss,
+                        planeRotY: Math.PI / 2,
+                        camPos: isSummerHalf
+                            ? new THREE.Vector3(225, 45, 55)
+                            : new THREE.Vector3(195, 50, -120),
+                        subtitle: isSummerHalf
+                            ? `<strong style="color:${segCss};">3. ЛЕТО (1/2 Сфирали II):</strong> Виток + пол-витка S второй Сфирали.`
+                            : `<strong style="color:${segCss};">4. ОСЕНЬ (1/2 Сфирали II):</strong> Пол-витка S + виток второй Сфирали.`
+                    });
+                }
+
+                pushBridge(
+                    orderedN2[orderedN2.length - 1].pos,
+                    n1.toWorld(n1.segs.rightPts[0]),
+                    'winter',
+                    cW,
+                    0,
+                    new THREE.Vector3(35, 45, 235),
+                    `<strong style="color:${cW};">1. ЗИМА (1/2 Сфирали I):</strong> Возврат на первую половину первой Сфирали.`
+                );
+
+                const wAnchor = n1.toWorld(n1.segs.rightPts[50]);
+                const spAnchor = n1.toWorld(n1.segs.leftPts[50]);
+                const suAnchor = n2.toWorld(n2.segs.rightPts[50]);
+                const auAnchor = n2.toWorld(n2.segs.leftPts[50]);
+
+                floatingLabels.push(
+                    { anchorPos: wAnchor, labelPos: makeMidCoilLabelPos(wAnchor, 1.14), title: '1. ЗИМА', sub: 'Сфираль I · виток 1', color: cW, seasonKey: 'winter' },
+                    { anchorPos: spAnchor, labelPos: makeMidCoilLabelPos(spAnchor, 1.14), title: '2. ВЕСНА', sub: 'Сфираль I · виток 2', color: cSp, seasonKey: 'spring' },
+                    { anchorPos: suAnchor, labelPos: makeMidCoilLabelPos(suAnchor, 1.14), title: '3. ЛЕТО', sub: 'Сфираль II · виток 1', color: cSu, seasonKey: 'summer' },
+                    { anchorPos: auAnchor, labelPos: makeMidCoilLabelPos(auAnchor, 1.14), title: '4. ОСЕНЬ', sub: 'Сфираль II · виток 2', color: cAu, seasonKey: 'autumn' }
+                );
+            }
+            // Склеиваем весь маршрут в единую гладкую кривую CatmullRomCurve3 без ступенек на стыках сегментов
+            if (flowPath.length > 1) {
+                const rawPts = flowPath.map(item => item.pos);
+                flowCurve = new THREE.CatmullRomCurve3(rawPts, false, 'catmullrom', 0.35);
+                const sampleCount = 1200;
+                const spacedPts = flowCurve.getSpacedPoints(sampleCount);
+                const arcLengths = flowCurve.getLengths(flowPath.length - 1);
+                const totalLen = arcLengths[arcLengths.length - 1] || 1;
+                const pathUs = arcLengths.map(len => len / totalLen);
+
+                flowSamples = spacedPts.map((pt, sIdx) => {
+                    const u = sIdx / sampleCount;
+                    let bestIdx = 0;
+                    let bestDiff = Infinity;
+                    for (let k = 0; k < pathUs.length; k++) {
+                        const diff = Math.abs(pathUs[k] - u);
+                        if (diff < bestDiff) {
+                            bestDiff = diff;
+                            bestIdx = k;
+                        }
+                    }
+                    return {
+                        ...flowPath[bestIdx],
+                        u,
+                        pos: pt
+                    };
+                });
+            } else {
+                flowCurve = null;
+                flowSamples = flowPath.slice();
+            }
+
+            const pills = document.querySelectorAll('.season-pill');
+            ['winter', 'spring', 'summer', 'autumn'].forEach((sk, idx) => {
+                if (!pills[idx] || flowSamples.length === 0) return;
+                const matching = flowSamples.filter(s => s.seasonKey === sk);
+                if (matching.length > 0) {
+                    const midSample = matching[Math.floor(matching.length / 2)];
+                    pills[idx].dataset.jump = midSample.u.toFixed(3);
+                }
+            });
+
+            rebuildLabelDOM();
+            updateFlowVisuals(0.05);
+        }
+
+        function rebuildLabelDOM() {
+            labelsLayer.innerHTML = '';
+            leaderLinesSvg.innerHTML = '';
+            floatingLabels.forEach((m, i) => {
+                const div = document.createElement('div');
+                div.className = 'label-3d';
+                div.id = `lbl3d_${i}`;
+                div.style.borderColor = m.color;
+                div.innerHTML = `<strong style="color:${m.color}"><i class="lbl-dot" style="background:${m.color}; box-shadow:0 0 8px ${m.color};"></i>${m.title}</strong><span>${m.sub}</span>`;
+                labelsLayer.appendChild(div);
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('id', `ldrLine_${i}`);
+                line.setAttribute('stroke', m.color);
+                line.setAttribute('stroke-width', '1.3');
+                line.setAttribute('stroke-dasharray', '3 3');
+                line.setAttribute('stroke-opacity', '0.55');
+                leaderLinesSvg.appendChild(line);
+
+                const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dot.setAttribute('id', `ldrDot_${i}`);
+                dot.setAttribute('r', '3.2');
+                dot.setAttribute('fill', m.color);
+                dot.setAttribute('fill-opacity', '0.9');
+                leaderLinesSvg.appendChild(dot);
+            });
+        }
+
+        const polePlusLocal = new THREE.Vector3(0, 0, 95);
+        const poleMinusLocal = new THREE.Vector3(0, 0, -95);
+
+        function ensureAxisPoleDOM() {
+            let pPlus = document.getElementById('lbl3d_pole_plus');
+            let pMinus = document.getElementById('lbl3d_pole_minus');
+            if (!pPlus) {
+                pPlus = document.createElement('div');
+                pPlus.className = 'label-3d';
+                pPlus.id = 'lbl3d_pole_plus';
+                pPlus.innerHTML = `<strong>Полюс +</strong><span>Ось сезона</span>`;
+                labelsLayer.appendChild(pPlus);
+            }
+            if (!pMinus) {
+                pMinus = document.createElement('div');
+                pMinus.className = 'label-3d';
+                pMinus.id = 'lbl3d_pole_minus';
+                pMinus.innerHTML = `<strong>Полюс −</strong><span>Ось сезона</span>`;
+                labelsLayer.appendChild(pMinus);
+            }
+            return { pPlus, pMinus };
+        }
+
+        function projectAt(worldPos, halfW, halfH) {
+            const v = worldPos.clone().project(camera);
+            if (v.z > 1) return null;
+            return {
+                x: v.x * halfW + halfW,
+                y: -v.y * halfH + halfH
+            };
+        }
+
+        function updateProjectedLabels(activeSeasonKey) {
+            if (!state.showLabels) {
+                labelsLayer.style.display = 'none';
+                leaderLinesSvg.style.display = 'none';
+                return;
+            }
+            labelsLayer.style.display = 'block';
+            leaderLinesSvg.style.display = 'block';
+            const halfW = window.innerWidth / 2;
+            const halfH = window.innerHeight / 2;
+
+            modelRoot.updateMatrixWorld(true);
+            const placedBoxes = [];
+
+            floatingLabels.forEach((m, i) => {
+                const el = document.getElementById(`lbl3d_${i}`);
+                const line = document.getElementById(`ldrLine_${i}`);
+                const dot = document.getElementById(`ldrDot_${i}`);
+                if (!el) return;
+
+                const worldAnchor = m.anchorPos.clone().applyMatrix4(modelRoot.matrixWorld);
+                const worldLabel = m.labelPos.clone().applyMatrix4(modelRoot.matrixWorld);
+
+                const ptAnchor = projectAt(worldAnchor, halfW, halfH);
+                const ptLabel = projectAt(worldLabel, halfW, halfH);
+
+                if (!ptAnchor || !ptLabel) {
+                    el.style.opacity = '0';
+                    if (line) line.style.display = 'none';
+                    if (dot) dot.style.display = 'none';
+                } else {
+                    let lx = ptLabel.x;
+                    let ly = ptLabel.y;
+
+                    // Мягкое разведение в 2D, если при каком-то ракурсе камеры две плашки сблизились
+                    for (const box of placedBoxes) {
+                        const dx = lx - box.x;
+                        const dy = ly - box.y;
+                        if (Math.abs(dx) < 138 && Math.abs(dy) < 46) {
+                            ly += (dy >= 0 ? 1 : -1) * (48 - Math.abs(dy));
+                        }
+                    }
+                    placedBoxes.push({ x: lx, y: ly });
+
+                    const isActive = m.seasonKey === activeSeasonKey;
+                    el.style.opacity = isActive ? '1' : '0.72';
+                    el.style.left = `${lx}px`;
+                    el.style.top = `${ly}px`;
+                    el.style.boxShadow = isActive
+                        ? `0 0 22px ${m.color}55, 0 8px 24px rgba(0,0,0,0.65)`
+                        : '0 6px 20px rgba(0,0,0,0.55)';
+                    el.classList.toggle('highlight', isActive);
+
+                    if (line) {
+                        line.style.display = 'block';
+                        line.setAttribute('x1', ptAnchor.x.toFixed(1));
+                        line.setAttribute('y1', ptAnchor.y.toFixed(1));
+                        line.setAttribute('x2', lx.toFixed(1));
+                        line.setAttribute('y2', ly.toFixed(1));
+                        line.setAttribute('stroke-opacity', isActive ? '0.9' : '0.42');
+                    }
+                    if (dot) {
+                        dot.style.display = 'block';
+                        dot.setAttribute('cx', ptAnchor.x.toFixed(1));
+                        dot.setAttribute('cy', ptAnchor.y.toFixed(1));
+                        dot.setAttribute('r', isActive ? '4.2' : '3.0');
+                    }
+                }
+            });
+
+            const { pPlus, pMinus } = ensureAxisPoleDOM();
+            const showPoles = state.showPlane && state.mode === 'duplex';
+            if (!showPoles) {
+                pPlus.style.opacity = '0';
+                pMinus.style.opacity = '0';
+            } else {
+                activePlaneGroup.updateMatrixWorld(true);
+                const plusWorld = polePlusLocal.clone().applyMatrix4(activePlaneGroup.matrixWorld);
+                const minusWorld = poleMinusLocal.clone().applyMatrix4(activePlaneGroup.matrixWorld);
+                const isAutumn = activeSeasonKey === 'autumn';
+                const plusTitle = isAutumn ? 'N — Полюс Осени (Север)' : 'N — Полюс Весны (Север)';
+                const minusTitle = isAutumn ? 'S — Полюс Весны (Юг)' : 'S — Полюс Осени (Юг)';
+                const col = state.colorMode === 'poles2'
+                    ? '#ef4444'
+                    : (isAutumn ? getSeasonColorInfo('autumn').css : getSeasonColorInfo('spring').css);
+
+                const ptPlus = projectAt(plusWorld, halfW, halfH);
+                if (ptPlus) {
+                    pPlus.style.opacity = '1';
+                    pPlus.style.borderColor = col;
+                    pPlus.innerHTML = `<strong style="color:${col}">${plusTitle}</strong><span>Компас оси 90°</span>`;
+                    pPlus.style.left = `${ptPlus.x}px`;
+                    pPlus.style.top = `${ptPlus.y}px`;
+                } else {
+                    pPlus.style.opacity = '0';
+                }
+
+                const ptMinus = projectAt(minusWorld, halfW, halfH);
+                if (ptMinus) {
+                    pMinus.style.opacity = '1';
+                    pMinus.style.borderColor = col;
+                    pMinus.innerHTML = `<strong style="color:${col}">${minusTitle}</strong><span>Компас оси 90°</span>`;
+                    pMinus.style.left = `${ptMinus.x}px`;
+                    pMinus.style.top = `${ptMinus.y}px`;
+                } else {
+                    pMinus.style.opacity = '0';
+                }
+            }
+        }
+
+        let currentSeasonKey = 'winter';
+
+        function updateFlowVisuals(dt) {
+            if (flowSamples.length === 0) return;
+            const total = flowSamples.length;
+            const normT = ((state.t % 1.0) + 1.0) % 1.0;
+            const exactIdx = normT * (total - 1);
+            const headIdx = Math.min(total - 1, Math.max(0, Math.floor(exactIdx)));
+            const current = flowCurve
+                ? {
+                    ...flowSamples[headIdx],
+                    pos: flowCurve.getPointAt(normT)
+                  }
+                : flowSamples[headIdx];
+            currentSeasonKey = current.seasonKey;
+
+            // Обновляем комету: голова идёт строго по непрерывной кривой, хвост тянется назад без перескока через край
+            const headColor = new THREE.Color(current.color);
+            const fadedTailColor = new THREE.Color(0x1e293b);
+            for (let i = 0; i < trailCount; i++) {
+                const item = trailMeshes[i];
+                if (i === 0) {
+                    item.mesh.position.copy(current.pos);
+                    item.mesh.material.color.copy(headColor).lerp(new THREE.Color(0xffffff), 0.25);
+                    item.mesh.material.opacity = 1.0;
+                } else {
+                    const backIdx = headIdx - i * 2;
+                    if (backIdx < 0) {
+                        item.mesh.position.copy(flowSamples[0].pos);
+                        item.mesh.material.opacity = 0;
+                    } else {
+                        const pt = flowSamples[backIdx];
+                        item.mesh.position.copy(pt.pos);
+                        const satFactor = Math.pow(item.falloff, 0.85);
+                        item.mesh.material.color.copy(fadedTailColor).lerp(headColor, satFactor);
+                        item.mesh.material.opacity = item.falloff * 0.65;
+                    }
+                }
+            }
+
+            // Насыщенные контурные линии сезонов
+            const setRailTone = (mat, active, hexColor) => {
+                if (!mat) return;
+                mat.color.set(hexColor);
+                mat.opacity = active ? 0.95 : 0.55;
+            };
+            if (state.mode === 'single') {
+                setRailTone(segmentMaterials.winter, current.seasonKey === 'winter', getSeasonColorInfo('winter').hex);
+                setRailTone(segmentMaterials.s1, current.seasonKey === 'spring', getSeasonColorInfo('spring').hex);
+                setRailTone(segmentMaterials.spring, current.seasonKey === 'summer', getSeasonColorInfo('summer').hex);
+                setRailTone(segmentMaterials.s2, current.seasonKey === 'autumn', getSeasonColorInfo('autumn').hex);
+            } else {
+                setRailTone(segmentMaterials.winter, current.seasonKey === 'winter', getSeasonColorInfo('winter').hex);
+                setRailTone(segmentMaterials.s1, current.seasonKey === 'winter', getSeasonColorInfo('winter').hex);
+                setRailTone(segmentMaterials.spring, current.seasonKey === 'spring', getSeasonColorInfo('spring').hex);
+                setRailTone(segmentMaterials.s2, current.seasonKey === 'spring', getSeasonColorInfo('spring').hex);
+                setRailTone(segmentMaterials.summer, current.seasonKey === 'summer', getSeasonColorInfo('summer').hex);
+                setRailTone(segmentMaterials.s3, current.seasonKey === 'summer', getSeasonColorInfo('summer').hex);
+                setRailTone(segmentMaterials.autumn, current.seasonKey === 'autumn', getSeasonColorInfo('autumn').hex);
+                setRailTone(segmentMaterials.s4, current.seasonKey === 'autumn', getSeasonColorInfo('autumn').hex);
+            }
+
+            // Плавный поворот круга активной плоскости (как рамка гироскопа)
+            activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
+            const targetRotY = current.planeRotY;
+            activePlaneGroup.rotation.y += (targetRotY - activePlaneGroup.rotation.y) * Math.min(1, dt * 6);
+            ringMat.color.set(current.color);
+            discMat.color.set(current.color);
+            axisMat.color.set(current.color);
+            crossAxisMat.color.set(current.color);
+
+            // Если включено «Следить за сезоном» — плавно поворачиваем камеру вслед за активной плоскостью
+            if (state.camFollow && state.playing && state.autoRotate === 'off') {
+                camera.position.lerp(current.camPos, Math.min(1, dt * 1.8));
+                controls.target.lerp(new THREE.Vector3(0, 0, 0), Math.min(1, dt * 4));
+            }
+
+            // Субтитр и подсветка кнопок сезонов внизу
+            document.getElementById('subtitleText').innerHTML = current.subtitle;
+            const seasonOrder = ['winter', 'spring', 'summer', 'autumn'];
+            document.querySelectorAll('.season-pill').forEach((pill, idx) => {
+                pill.classList.toggle('active', seasonOrder[idx] === current.seasonKey);
+            });
+        }
+
+        // =========================================================================
+        // 5. УПРАВЛЕНИЕ И СОБЫТИЯ
+        // =========================================================================
+        const btnTour = document.getElementById('btnTourToggle');
+        function setPlaying(play) {
+            state.playing = play;
+            btnTour.textContent = play ? '⏸ Пауза тура (Пробел)' : '▶ Продолжить тур (Пробел)';
+            btnTour.classList.toggle('playing', play);
+        }
+        btnTour.addEventListener('click', () => setPlaying(!state.playing));
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                setPlaying(!state.playing);
+            }
+        });
+
+        const btnSingle = document.getElementById('btnModeSingle');
+        const btnDuplex = document.getElementById('btnModeDuplex');
+        function setMode(mode) {
+            state.mode = mode;
+            btnSingle.classList.toggle('active', mode === 'single');
+            btnDuplex.classList.toggle('active', mode === 'duplex');
+            state.nodes = JSON.parse(JSON.stringify(mode === 'single' ? SINGLE_NODES : DUPLEX_NODES));
+            activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
+        applyColorPaletteToUI();
+        rebuildScene();
+        }
+        btnSingle.addEventListener('click', () => setMode('single'));
+        btnDuplex.addEventListener('click', () => setMode('duplex'));
+
+        const btnCamFollow = document.getElementById('btnCamFollow');
+        function updateCamFollowBtn() {
+            btnCamFollow.textContent = state.camFollow ? '🎥 Следить за сезоном: ВКЛ' : '🎥 Следить за сезоном: ВЫКЛ';
+            btnCamFollow.style.color = state.camFollow ? '#00ffaa' : '#94a3b8';
+        }
+        updateCamFollowBtn();
+        btnCamFollow.addEventListener('click', () => {
+            state.camFollow = !state.camFollow;
+            updateCamFollowBtn();
+        });
+
+        // Сворачивание боковых панелей
+        const leftPanel = document.getElementById('leftPanel');
+        const rightPanel = document.getElementById('rightPanel');
+        const toggleLeftTab = document.getElementById('toggleLeftTab');
+        const toggleRightTab = document.getElementById('toggleRightTab');
+
+        function setPanelCollapsed(side, collapsed) {
+            if (side === 'left') {
+                leftPanel.classList.toggle('collapsed', collapsed);
+                toggleLeftTab.style.display = collapsed ? 'block' : 'none';
+            } else {
+                rightPanel.classList.toggle('collapsed', collapsed);
+                toggleRightTab.style.display = collapsed ? 'block' : 'none';
+            }
+        }
+        document.getElementById('collapseLeftBtn').addEventListener('click', () => setPanelCollapsed('left', true));
+        document.getElementById('collapseRightBtn').addEventListener('click', () => setPanelCollapsed('right', true));
+        toggleLeftTab.addEventListener('click', () => setPanelCollapsed('left', false));
+        toggleRightTab.addEventListener('click', () => setPanelCollapsed('right', false));
+
+        if (window.innerWidth < 1150) {
+            setPanelCollapsed('left', true);
+            setPanelCollapsed('right', true);
+        }
+
+        // Чистый экран
+        document.getElementById('btnCleanScreen').addEventListener('click', () => document.body.classList.add('clean-screen'));
+        document.getElementById('exitCleanBtn').addEventListener('click', () => document.body.classList.remove('clean-screen'));
+
+        // Ракурсы из карточек слева
+        document.querySelectorAll('.cam-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.camFollow = false;
+                updateCamFollowBtn();
+                controls.target.set(0, 0, 0);
+                const c = btn.dataset.cam;
+                if (c === 'iso') camera.position.set(165, 125, 205);
+                if (c === 'top') camera.position.set(0, 260, 0.1);
+                if (c === 'side') camera.position.set(250, 0, 0);
+                controls.update();
+            });
+        });
+
+        // Ползунок растяжения
+
+        // Скорость и вращение
+        document.getElementById('rngSpeed').addEventListener('input', (e) => {
+            state.speed = parseFloat(e.target.value);
+            document.getElementById('valSpeed').textContent = state.speed.toFixed(1) + '×';
+        });
+        document.querySelectorAll('[data-rot]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-rot]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.autoRotate = btn.dataset.rot;
+            });
+        });
+        document.querySelectorAll('[data-colormode]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-colormode]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.colorMode = btn.dataset.colormode;
+                applyColorPaletteToUI();
+                        activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
+                rebuildScene();
+            });
+        });
+
+        // Оптика
+        document.getElementById('rngTube').addEventListener('input', (e) => {
+            state.tubeRadius = parseFloat(e.target.value);
+            document.getElementById('valTube').textContent = state.tubeRadius.toFixed(1);
+            activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
+        rebuildScene();
+        });
+        document.getElementById('rngBloom').addEventListener('input', (e) => {
+            state.bloomStrength = parseFloat(e.target.value);
+            document.getElementById('valBloom').textContent = state.bloomStrength.toFixed(2);
+            bloomPass.strength = state.bloomStrength;
+        });
+        document.getElementById('rngGlass').addEventListener('input', (e) => {
+            const pct = parseInt(e.target.value, 10);
+            state.glassOpacity = pct / 100;
+            document.getElementById('valGlass').textContent = pct + '%';
+            activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
+        rebuildScene();
+        });
+
+        // Переключатели подсказок
+        function bindSwitch(id, key, cb) {
+            const btn = document.getElementById(id);
+            btn.addEventListener('click', () => {
+                state[key] = !state[key];
+                btn.textContent = state[key] ? 'ВКЛ' : 'ВЫКЛ';
+                btn.classList.toggle('off', !state[key]);
+                if (cb) cb(state[key]);
+            });
+        }
+        bindSwitch('tglLabels', 'showLabels');
+        bindSwitch('tglPlane', 'showPlane', (v) => { activePlaneGroup.visible = v; });
+        bindSwitch('tglCore', 'showCore', (v) => { coreGroup.visible = v; });
+
+        // Шкала времени и кнопки сезонов
+        const rngTimeline = document.getElementById('rngTimeline');
+        rngTimeline.addEventListener('input', (e) => {
+            state.t = parseFloat(e.target.value);
+            updateFlowVisuals(0.05);
+        });
+        document.querySelectorAll('.season-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                state.t = parseFloat(pill.dataset.jump);
+                rngTimeline.value = state.t;
+                if (state.camFollow && flowSamples.length > 0) {
+                    const idx = Math.floor(state.t * (flowSamples.length - 1));
+                    camera.position.copy(flowSamples[idx].camPos);
+                }
+                updateFlowVisuals(0.2);
+            });
+        });
+
+        // =========================================================================
+        // 6. ГЛАВНЫЙ ЦИКЛ
+        // =========================================================================
+        const clock = new THREE.Clock();
+        activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
+        rebuildScene();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.1);
+            const elapsed = clock.getElapsedTime();
+
+            if (state.playing) {
+                state.t = (state.t + dt * state.speed * 0.022) % 1.0;
+                rngTimeline.value = state.t.toFixed(3);
+            }
+
+            if (state.autoRotate === 'y') {
+                modelRoot.rotation.y += dt * 0.5;
+            } else if (state.autoRotate === '3d') {
+                modelRoot.rotation.y += dt * 0.4;
+                modelRoot.rotation.x = Math.sin(elapsed * 0.6) * 0.3;
+            }
+
+            coreHalo.scale.setScalar(1.0 + Math.sin(elapsed * 3.0) * 0.16);
+
+            updateFlowVisuals(dt);
+            controls.update();
+            updateProjectedLabels(currentSeasonKey);
+            composer.render();
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
