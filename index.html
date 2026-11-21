@@ -2,40 +2,44 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Сфираль и Времена Года — Интерактивный 3D-тур</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Сфираль и Календари — Дни недели, Григорианский, Цолькин и День вне времени</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
             background: #060911;
             color: #e2e8f0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             overflow: hidden;
             user-select: none;
+            touch-action: none;
         }
         #canvasContainer {
             position: fixed;
             inset: 0;
             width: 100vw;
             height: 100vh;
+            touch-action: none;
         }
-        canvas { display: block; width: 100%; height: 100%; }
+        canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
         /* Верхняя панель управления */
         #topBar {
             position: fixed;
-            top: 14px;
+            top: max(10px, env(safe-area-inset-top));
             left: 50%;
             transform: translateX(-50%);
             z-index: 30;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
             justify-content: center;
-            background: rgba(11, 17, 30, 0.88);
+            width: max-content;
+            max-width: calc(100vw - 20px);
+            background: rgba(11, 17, 30, 0.9);
             border: 1px solid #1e3154;
-            padding: 8px 14px;
+            padding: 7px 11px;
             border-radius: 12px;
             backdrop-filter: blur(10px);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65);
@@ -44,97 +48,100 @@
             background: #131e36;
             color: #94a3b8;
             border: 1px solid #263d66;
-            padding: 7px 14px;
+            padding: 6px 11px;
             border-radius: 7px;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
+            white-space: nowrap;
         }
         .mode-btn:hover { border-color: #00e5ff; color: #fff; }
         .mode-btn.active {
             background: linear-gradient(135deg, #00e5ff 0%, #00b8d4 100%);
             color: #060911;
             border-color: #00e5ff;
-            box-shadow: 0 0 14px rgba(0, 229, 255, 0.45);
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
         }
         .tour-btn {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: #04130d;
             border: none;
-            padding: 7px 15px;
+            padding: 6px 12px;
             border-radius: 7px;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             font-weight: 800;
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+            white-space: nowrap;
         }
-        .tour-btn:hover { filter: brightness(1.1); }
         .tour-btn.playing {
             background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
             color: #140c02;
-            box-shadow: 0 0 14px rgba(251, 191, 36, 0.4);
+            box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
         }
         .util-btn {
             background: #14223b;
             color: #cbd5e1;
             border: 1px solid #263d66;
-            padding: 7px 11px;
+            padding: 6px 10px;
             border-radius: 7px;
-            font-size: 0.78rem;
+            font-size: 0.76rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
+            white-space: nowrap;
         }
         .util-btn:hover { border-color: #00e5ff; color: #fff; }
 
         /* Боковые сворачиваемые панели */
         .side-panel {
             position: fixed;
-            top: 72px;
-            bottom: 92px;
-            width: 310px;
-            z-index: 25;
-            background: rgba(11, 16, 29, 0.88);
+            top: 68px;
+            bottom: 132px;
+            width: 325px;
+            z-index: 26;
+            background: rgba(11, 16, 29, 0.93);
             border: 1px solid #1d2f4f;
             border-radius: 12px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
             display: flex;
             flex-direction: column;
             transition: transform 0.25s ease, opacity 0.25s ease;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
         }
-        #leftPanel { left: 14px; }
-        #rightPanel { right: 14px; }
-        #leftPanel.collapsed { transform: translateX(-340px); pointer-events: none; opacity: 0; }
-        #rightPanel.collapsed { transform: translateX(340px); pointer-events: none; opacity: 0; }
+        #leftPanel { left: 12px; }
+        #rightPanel { right: 12px; }
+        #leftPanel.collapsed { transform: translateX(-360px); pointer-events: none; opacity: 0; }
+        #rightPanel.collapsed { transform: translateX(360px); pointer-events: none; opacity: 0; }
 
         .panel-toggle-tab {
             position: fixed;
-            top: 72px;
+            top: 68px;
             z-index: 28;
             background: rgba(14, 22, 38, 0.92);
             color: #00e5ff;
             border: 1px solid #264170;
-            padding: 7px 12px;
+            padding: 7px 11px;
             border-radius: 8px;
-            font-size: 0.76rem;
+            font-size: 0.75rem;
             font-weight: 700;
             cursor: pointer;
             backdrop-filter: blur(6px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
         }
         .panel-toggle-tab:hover { background: #00e5ff; color: #060911; }
-        #toggleLeftTab { left: 14px; display: none; }
-        #toggleRightTab { right: 14px; display: none; }
+        #toggleLeftTab { left: 12px; display: none; }
+        #toggleRightTab { right: 12px; display: none; }
 
         .panel-head {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 11px 14px;
+            padding: 10px 13px;
             border-bottom: 1px solid #1a2a47;
-            font-size: 0.84rem;
+            font-size: 0.82rem;
             font-weight: 700;
             color: #00e5ff;
         }
@@ -143,19 +150,20 @@
             color: #94a3b8;
             border: 1px solid #283f6b;
             border-radius: 5px;
-            padding: 2px 8px;
-            font-size: 0.75rem;
+            padding: 3px 9px;
+            font-size: 0.76rem;
             cursor: pointer;
         }
         .collapse-btn:hover { color: #fff; border-color: #00e5ff; }
 
         .panel-body {
-            padding: 12px 14px;
+            padding: 11px 12px;
             overflow-y: auto;
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
+            touch-action: pan-y;
         }
         .panel-body::-webkit-scrollbar { width: 5px; }
         .panel-body::-webkit-scrollbar-thumb { background: #233861; border-radius: 4px; }
@@ -166,48 +174,53 @@
             border: 1px solid #23375e;
             border-left: 3px solid #00e5ff;
             border-radius: 8px;
-            padding: 11px 12px;
+            padding: 10px 11px;
         }
         .story-card h4 {
-            font-size: 0.8rem;
+            font-size: 0.79rem;
             color: #00ffaa;
             margin-bottom: 5px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 6px;
         }
         .story-card p {
-            font-size: 0.76rem;
-            line-height: 1.48;
+            font-size: 0.75rem;
+            line-height: 1.46;
             color: #cbd5e1;
         }
         .cam-btn {
             background: #1a2d52;
             color: #ffee00;
             border: 1px solid #4d4822;
-            padding: 2px 8px;
+            padding: 3px 8px;
             border-radius: 4px;
             font-size: 0.68rem;
             cursor: pointer;
+            flex-shrink: 0;
         }
         .cam-btn:hover { background: #ffee00; color: #060911; }
 
         /* Элементы управления */
         .ctrl-group {
-            background: rgba(16, 24, 42, 0.75);
+            background: rgba(16, 24, 42, 0.78);
             border: 1px solid #1e3052;
             border-radius: 8px;
-            padding: 10px 11px;
+            padding: 9px 10px;
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
         .ctrl-title {
-            font-size: 0.72rem;
+            font-size: 0.71rem;
             font-weight: 700;
             color: #93c5fd;
             text-transform: uppercase;
             letter-spacing: 0.04em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .slider-row {
             display: flex;
@@ -217,13 +230,14 @@
         .slider-label {
             display: flex;
             justify-content: space-between;
-            font-size: 0.74rem;
+            font-size: 0.73rem;
             color: #cbd5e1;
         }
         input[type="range"] {
             width: 100%;
             accent-color: #00e5ff;
             cursor: pointer;
+            height: 20px;
         }
         .preset-row {
             display: flex;
@@ -232,14 +246,16 @@
         }
         .mini-btn {
             flex: 1;
+            min-width: 64px;
             background: #182747;
             color: #cbd5e1;
             border: 1px solid #2b4475;
-            padding: 4px 6px;
+            padding: 5px 6px;
             border-radius: 5px;
             font-size: 0.7rem;
             cursor: pointer;
             text-align: center;
+            transition: all 0.15s;
         }
         .mini-btn:hover, .mini-btn.active {
             background: #00e5ff;
@@ -251,18 +267,20 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.75rem;
+            font-size: 0.74rem;
             color: #cbd5e1;
+            gap: 8px;
         }
         .switch-btn {
             background: #132c2b;
             color: #00ffaa;
             border: 1px solid #00ffaa;
-            padding: 2px 9px;
+            padding: 3px 10px;
             border-radius: 4px;
             font-size: 0.7rem;
             font-weight: 700;
             cursor: pointer;
+            flex-shrink: 0;
         }
         .switch-btn.off {
             background: #2b181d;
@@ -270,52 +288,451 @@
             border-color: #f87171;
         }
 
-        /* Нижняя панель-субтитр и шкала времени */
+        /* Карточка календаря и дней недели в правой панели */
+        .cal-card {
+            background: rgba(11, 19, 34, 0.94);
+            border: 1px solid #27406b;
+            border-radius: 8px;
+            padding: 9px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+        .cal-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+        }
+        .cal-main-val {
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: #f8fafc;
+        }
+        .cal-sub-val {
+            font-size: 0.71rem;
+            color: #94a3b8;
+            line-height: 1.35;
+        }
+        .step-nav {
+            display: flex;
+            gap: 4px;
+        }
+        .step-btn {
+            background: #172747;
+            color: #7dd3fc;
+            border: 1px solid #2c4a80;
+            border-radius: 5px;
+            padding: 3px 7px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .step-btn:hover { background: #00e5ff; color: #060911; }
+
+        /* Лента дней недели (Пн–Вс) */
+        .weekday-strip {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+        }
+        .wd-cell {
+            background: #111b30;
+            border: 1px solid #22355c;
+            border-radius: 5px;
+            padding: 4px 2px;
+            text-align: center;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .wd-cell.weekend { color: #fca5a5; }
+        .wd-cell:hover { border-color: #00e5ff; color: #fff; }
+        .wd-cell.active {
+            background: linear-gradient(135deg, #00e5ff, #0284c7);
+            color: #060911;
+            border-color: #00e5ff;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.45);
+            transform: translateY(-1px);
+        }
+        .wd-cell.oot-day {
+            background: linear-gradient(135deg, #00ffaa, #a855f7);
+            color: #060911;
+            border-color: #00ffaa;
+        }
+
+        /* Мини-сетка месяца */
+        .mini-month-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            background: rgba(8, 13, 24, 0.7);
+            padding: 5px;
+            border-radius: 6px;
+            border: 1px solid #1d2f52;
+        }
+        .mm-day {
+            text-align: center;
+            font-size: 0.65rem;
+            padding: 3px 0;
+            border-radius: 4px;
+            color: #cbd5e1;
+            cursor: pointer;
+        }
+        .mm-day:hover { background: rgba(0, 229, 255, 0.2); }
+        .mm-day.empty { pointer-events: none; opacity: 0; }
+        .mm-day.weekend { color: #f87171; }
+        .mm-day.active {
+            background: #fde047;
+            color: #060911;
+            font-weight: 800;
+            box-shadow: 0 0 8px rgba(253, 224, 71, 0.5);
+        }
+
+        .cal-input-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .cal-input {
+            flex: 1;
+            background: #0d1628;
+            color: #e2e8f0;
+            border: 1px solid #2b4475;
+            border-radius: 5px;
+            padding: 4px 7px;
+            font-size: 0.73rem;
+            font-family: inherit;
+        }
+
+        /* Карточка Печати Цолькина + Тон майя */
+        .tzolkin-hero {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(11, 18, 34, 0.96);
+            border: 1px solid #2d4778;
+            border-radius: 9px;
+            padding: 8px 10px;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+        .glyph-box {
+            width: 54px;
+            height: 54px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: #0c1424;
+            border: 2px solid #ef4444;
+            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.65);
+        }
+        .glyph-box svg {
+            width: 40px;
+            height: 40px;
+        }
+        .tzolkin-meta {
+            flex: 1;
+            min-width: 0;
+        }
+        .tzolkin-kin-title {
+            font-size: 0.83rem;
+            font-weight: 800;
+            color: #f8fafc;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tzolkin-seal-sub {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 1px;
+        }
+        .maya-tone-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 5px;
+        }
+        .maya-numeral {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            padding: 2px 7px;
+            border-radius: 5px;
+            height: 20px;
+        }
+        .maya-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .maya-bar {
+            width: 16px;
+            height: 2.6px;
+            border-radius: 2px;
+            background: #fde047;
+        }
+        .maya-dots {
+            display: flex;
+            gap: 2.5px;
+        }
+        .maya-dot {
+            width: 4.5px;
+            height: 4.5px;
+            border-radius: 50%;
+            background: #fde047;
+        }
+
+        /* Матрица 20 печатей Цолькина */
+        .seals-matrix {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+        }
+        .seal-tile {
+            background: #0e172a;
+            border: 1px solid #22355c;
+            border-radius: 6px;
+            padding: 4px 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .seal-tile svg {
+            width: 24px;
+            height: 24px;
+        }
+        .seal-tile span {
+            font-size: 0.58rem;
+            color: #94a3b8;
+            text-align: center;
+            line-height: 1.1;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .seal-tile:hover { border-color: #00e5ff; transform: translateY(-1px); }
+        .seal-tile.active {
+            background: rgba(255, 255, 255, 0.1);
+            border-width: 1.5px;
+            transform: scale(1.04);
+        }
+        .seal-tile.active span { color: #fff; font-weight: 700; }
+
+        .oot-btn {
+            width: 100%;
+            background: linear-gradient(135deg, rgba(0, 255, 170, 0.18), rgba(168, 85, 247, 0.22));
+            color: #6ee7b7;
+            border: 1px solid #00ffaa;
+            padding: 6px 8px;
+            border-radius: 6px;
+            font-size: 0.73rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .oot-btn:hover, .oot-btn.active {
+            background: linear-gradient(135deg, #00ffaa, #a855f7);
+            color: #060911;
+            box-shadow: 0 0 14px rgba(0, 255, 170, 0.45);
+        }
+
+        /* Нижняя панель-субтитр, календарная плашка с печатью и шкала времени */
         #bottomBar {
             position: fixed;
-            bottom: 14px;
+            bottom: max(10px, env(safe-area-inset-bottom));
             left: 50%;
             transform: translateX(-50%);
             z-index: 30;
-            width: min(860px, calc(100vw - 28px));
-            background: rgba(11, 16, 29, 0.92);
+            width: min(980px, calc(100vw - 20px));
+            background: rgba(11, 16, 29, 0.94);
             border: 1px solid #1e3154;
             border-radius: 12px;
-            padding: 10px 16px;
+            padding: 8px 13px;
             backdrop-filter: blur(10px);
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65);
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+        #bottomBar.oot-active {
+            border-color: #00ffaa;
+            box-shadow: 0 0 28px rgba(0, 255, 170, 0.28), 0 8px 32px rgba(0, 0, 0, 0.7);
+        }
+        .cal-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(38, 61, 102, 0.55);
+        }
+        .cal-tabs {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .cal-tab {
+            background: #131f38;
+            color: #94a3b8;
+            border: 1px solid #263d66;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.71rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .cal-tab.active {
+            background: #00e5ff;
+            color: #060911;
+            border-color: #00e5ff;
+        }
+        .cal-tab.oot-pill {
+            border-color: rgba(0, 255, 170, 0.55);
+            color: #6ee7b7;
+        }
+        .cal-tab.oot-pill.active {
+            background: linear-gradient(135deg, #00ffaa, #c084fc);
+            color: #060911;
+            border-color: #00ffaa;
+            box-shadow: 0 0 12px rgba(0, 255, 170, 0.5);
+        }
+
+        /* Компактная живая строка: Дни недели + Печать Цолькина */
+        .live-cal-widget {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .mini-wd-bar {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            background: #0c1424;
+            border: 1px solid #22365c;
+            padding: 2px 4px;
+            border-radius: 6px;
+        }
+        .mini-wd-btn {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 0.66rem;
+            font-weight: 700;
+            padding: 2px 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .mini-wd-btn.weekend { color: #f87171; opacity: 0.75; }
+        .mini-wd-btn.active {
+            background: #00e5ff;
+            color: #060911;
+            opacity: 1;
+        }
+        .mini-step-btn {
+            background: #162440;
+            border: 1px solid #2b4575;
+            color: #cbd5e1;
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .mini-step-btn:hover { background: #00e5ff; color: #060911; }
+
+        .bottom-seal-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(15, 24, 44, 0.95);
+            border: 1px solid #334e80;
+            padding: 2px 8px 2px 4px;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .bottom-seal-pill:hover { border-color: #00e5ff; }
+        .bottom-seal-icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 5px;
+            background: #090f1d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1.5px solid #ef4444;
+        }
+        .bottom-seal-icon svg { width: 16px; height: 16px; }
+        .bottom-seal-text {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        #calendarReadout {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #fde047;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        #calendarReadout .cal-badge {
+            background: rgba(253, 224, 71, 0.14);
+            border: 1px solid rgba(253, 224, 71, 0.45);
+            color: #fef08a;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 0.71rem;
         }
         .subtitle-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             flex-wrap: wrap;
         }
         #subtitleText {
-            font-size: 0.85rem;
-            line-height: 1.35;
+            font-size: 0.79rem;
+            line-height: 1.3;
             color: #f1f5f9;
+            flex: 1 1 260px;
         }
         .season-pills {
             display: flex;
-            gap: 6px;
-            flex-shrink: 0;
+            gap: 5px;
+            flex-wrap: wrap;
         }
         .season-pill {
-            padding: 3px 10px;
+            padding: 3px 8px;
             border-radius: 5px;
-            font-size: 0.73rem;
+            font-size: 0.7rem;
             font-weight: 700;
             border: 1px solid transparent;
-            opacity: 0.55;
+            opacity: 0.6;
             cursor: pointer;
             transition: all 0.2s;
+            white-space: nowrap;
         }
-        .season-pill.active { opacity: 1; transform: scale(1.05); }
+        .season-pill.active { opacity: 1; transform: scale(1.04); }
 
         /* Чистые 3D-подписи на сцене */
         .label-3d {
@@ -323,29 +740,29 @@
             z-index: 15;
             pointer-events: none;
             transform: translate(-50%, -50%);
-            background: rgba(8, 13, 24, 0.82);
+            background: rgba(8, 13, 24, 0.86);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-left-width: 3px;
-            padding: 5px 11px;
+            padding: 4px 9px;
             border-radius: 8px;
-            font-size: 0.74rem;
-            line-height: 1.25;
+            font-size: 0.72rem;
+            line-height: 1.22;
             white-space: nowrap;
             backdrop-filter: blur(6px);
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
-            opacity: 0.72;
+            opacity: 0.75;
             transition: opacity 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
         }
         .label-3d strong {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.78rem;
+            gap: 5px;
+            font-size: 0.74rem;
             letter-spacing: 0.02em;
         }
         .label-3d .lbl-dot {
-            width: 7px;
-            height: 7px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             display: inline-block;
             flex-shrink: 0;
@@ -353,13 +770,13 @@
         .label-3d span {
             display: block;
             color: #94a3b8;
-            font-size: 0.67rem;
+            font-size: 0.65rem;
             margin-top: 1px;
         }
         .label-3d.highlight {
             opacity: 1 !important;
-            background: rgba(11, 18, 34, 0.94);
-            transform: translate(-50%, -50%) scale(1.09);
+            background: rgba(11, 18, 34, 0.96);
+            transform: translate(-50%, -50%) scale(1.07);
             z-index: 18;
         }
         #leaderLinesSvg {
@@ -369,6 +786,91 @@
             height: 100vh;
             pointer-events: none;
             z-index: 14;
+        }
+
+
+        /* Живой 3D-Компас ориентации камеры */
+        #compassHud {
+            position: fixed;
+            top: 68px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 25;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(10, 16, 29, 0.88);
+            border: 1px solid #263f6e;
+            border-radius: 999px;
+            padding: 5px 14px 5px 7px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+            pointer-events: auto;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        #compassHud:hover {
+            border-color: #00e5ff;
+            box-shadow: 0 0 18px rgba(0, 229, 255, 0.28);
+        }
+        #compassHud.compass-focus {
+            border-color: #ef4444;
+            box-shadow: 0 0 24px rgba(239, 68, 68, 0.35), 0 0 24px rgba(59, 130, 246, 0.3);
+            background: rgba(13, 20, 38, 0.96);
+        }
+        .compass-dial {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, #13203b 0%, #080d18 100%);
+            border: 1.5px solid #334e80;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .compass-dial svg {
+            width: 40px;
+            height: 40px;
+            overflow: visible;
+        }
+        .compass-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .compass-title {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #f8fafc;
+            letter-spacing: 0.03em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .compass-sub {
+            font-size: 0.65rem;
+            color: #94a3b8;
+        }
+        body.clean-screen #compassHud {
+            display: none !important;
+        }
+        @media (max-width: 768px) {
+            #compassHud {
+                padding: 4px 10px 4px 5px;
+                gap: 7px;
+            }
+            .compass-dial {
+                width: 36px;
+                height: 36px;
+            }
+            .compass-dial svg {
+                width: 32px;
+                height: 32px;
+            }
+            .compass-title { font-size: 0.66rem; }
+            .compass-sub { font-size: 0.58rem; }
         }
 
         /* Режим чистого экрана для записи видео */
@@ -381,10 +883,10 @@
         #exitCleanBtn {
             display: none;
             position: fixed;
-            top: 14px;
-            right: 14px;
+            top: max(12px, env(safe-area-inset-top));
+            right: 12px;
             z-index: 100;
-            background: rgba(12, 18, 32, 0.8);
+            background: rgba(12, 18, 32, 0.85);
             color: #00e5ff;
             border: 1px solid #00e5ff;
             padding: 6px 12px;
@@ -393,6 +895,62 @@
             cursor: pointer;
         }
         body.clean-screen #exitCleanBtn { display: block; }
+
+        /* Адаптация под мобильные экраны */
+        @media (max-width: 768px) {
+            #topBar {
+                width: calc(100vw - 16px);
+                padding: 6px 8px;
+                gap: 5px;
+                border-radius: 10px;
+            }
+            .tour-btn, .mode-btn, .util-btn {
+                padding: 5px 8px;
+                font-size: 0.71rem;
+                border-radius: 6px;
+            }
+            .panel-toggle-tab {
+                padding: 6px 9px;
+                font-size: 0.71rem;
+            }
+            .side-panel {
+                width: calc(100vw - 24px);
+                max-width: 360px;
+                bottom: 165px;
+                z-index: 35;
+            }
+            #leftPanel { left: 12px; }
+            #rightPanel { right: 12px; }
+            #leftPanel.collapsed { transform: translateX(-110%); }
+            #rightPanel.collapsed { transform: translateX(110%); }
+
+            #bottomBar {
+                width: calc(100vw - 16px);
+                padding: 7px 9px;
+                gap: 5px;
+                border-radius: 10px;
+            }
+            #subtitleText {
+                font-size: 0.72rem;
+                flex: 1 1 100%;
+            }
+            .season-pills {
+                width: 100%;
+                justify-content: space-between;
+            }
+            .season-pill {
+                flex: 1;
+                text-align: center;
+                padding: 3px 4px;
+                font-size: 0.65rem;
+            }
+            .label-3d {
+                padding: 3px 7px;
+                font-size: 0.65rem;
+            }
+            .label-3d strong { font-size: 0.67rem; }
+            .label-3d span { font-size: 0.59rem; }
+        }
     </style>
     <script type="importmap">
         {
@@ -411,24 +969,48 @@
 
     <!-- Верхняя панель -->
     <div id="topBar">
-        <button class="tour-btn playing" id="btnTourToggle">⏸ Пауза тура (Пробел)</button>
+        <button class="tour-btn playing" id="btnTourToggle">⏸ Пауза</button>
         <button class="mode-btn" id="btnModeSingle">Одна Сфираль</button>
-        <button class="mode-btn active" id="btnModeDuplex">Сфираль-дюплекс</button>
-        <button class="util-btn" id="btnCamFollow">🎥 Следить за сезоном: ВКЛ</button>
-        <button class="util-btn" id="btnCleanScreen">🎬 Чистый экран</button>
+        <button class="mode-btn active" id="btnModeDuplex">Дюплекс</button>
+        <button class="util-btn" id="btnCamFollow">🎥 Камера: ВКЛ</button>
+        <button class="util-btn" id="btnCleanScreen">🎬 Без UI</button>
+    </div>
+
+    <!-- Живой компас ориентации камеры относительно модели -->
+    <div id="compassHud" title="Компас показывает направление Север (N) / Юг (S) модели относительно текущего поворота камеры. Нажмите, чтобы выделить полюса N/S.">
+        <div class="compass-dial">
+            <svg viewBox="-22 -22 44 44">
+                <circle cx="0" cy="0" r="19" fill="none" stroke="#28406e" stroke-width="1" stroke-dasharray="2 2"/>
+                <g id="compassRoseGroup">
+                    <text x="0" y="-13" text-anchor="middle" fill="#ef4444" font-size="6.5" font-weight="800">N</text>
+                    <text x="0" y="17.5" text-anchor="middle" fill="#3b82f6" font-size="6.5" font-weight="800">S</text>
+                    <text x="14.5" y="2.2" text-anchor="middle" fill="#64748b" font-size="5.2" font-weight="700">E</text>
+                    <text x="-14.5" y="2.2" text-anchor="middle" fill="#64748b" font-size="5.2" font-weight="700">W</text>
+                    <!-- Стрелка Север (красная) -->
+                    <polygon points="0,-10 3.2,0 -3.2,0" fill="#ef4444"/>
+                    <!-- Стрелка Юг (синяя) -->
+                    <polygon points="0,10 3.2,0 -3.2,0" fill="#3b82f6"/>
+                    <circle cx="0" cy="0" r="2.2" fill="#f8fafc"/>
+                </g>
+            </svg>
+        </div>
+        <div class="compass-info">
+            <div class="compass-title" id="compassHeadingText">КОМПАС · N 0°</div>
+            <div class="compass-sub" id="compassViewDesc">Вид спереди · Нажмите для режима N/S</div>
+        </div>
     </div>
 
     <button id="exitCleanBtn">✕ Вернуть кнопки</button>
 
     <!-- Ярлыки разворота боковых панелей -->
-    <button class="panel-toggle-tab" id="toggleLeftTab">▶ Как это устроено</button>
-    <button class="panel-toggle-tab" id="toggleRightTab">◀ Настройки вида</button>
+    <button class="panel-toggle-tab" id="toggleLeftTab">▶ О модели</button>
+    <button class="panel-toggle-tab" id="toggleRightTab">◀ Календарь и настройки</button>
 
-    <!-- Левая панель: простое объяснение без лишних терминов -->
+    <!-- Левая панель: простое объяснение -->
     <div class="side-panel" id="leftPanel">
         <div class="panel-head">
             <span>🧭 Как устроен цикл года</span>
-            <button class="collapse-btn" id="collapseLeftBtn" title="Свернуть">◀</button>
+            <button class="collapse-btn" id="collapseLeftBtn" title="Свернуть">✕</button>
         </div>
         <div class="panel-body">
             <div class="story-card">
@@ -437,57 +1019,138 @@
                     <button class="cam-btn" data-cam="iso">3D-вид</button>
                 </h4>
                 <p>
-                    Это объемная форма из двух зеркальных витков, соединенных в центре плавной <b>S-петлей</b>. В ней нет резких углов: движение плавно скручивается в одну сторону, проходит через центр и разворачивается в противоположную.
+                    Это открытая топологическая форма из двух зеркально-антисимметричных витков, соединённых в центре плавной <b>S-петлёй</b>. Движение скручивается в одном витке, проходит инверсию через центр и разворачивается в противоположном витке.
                 </p>
             </div>
 
             <div class="story-card" style="border-left-color:#ffee00;">
                 <h4>
-                    <span>2. Почему здесь две Сфирали?</span>
-                    <button class="cam-btn" data-cam="top">Вид сверху</button>
+                    <span>2. Две Сфирали и 4 сезона</span>
+                    <button class="cam-btn" data-cam="top">Сверху</button>
                 </h4>
                 <p>
-                    Одна Сфираль задает два крайних полюса года — <b>Зиму</b> и <b>Лето</b>. Вторая Сфираль встает перпендикулярно первой и раскрывает два переходных сезона — <b>Весну</b> и <b>Осень</b>. Вместе они образуют 4 лепестка времени.
+                    Первая Сфираль задаёт <b>Зиму</b> и <b>Весну</b>. Вторая Сфираль встаёт перпендикулярно первой (под углом 90°) и раскрывает <b>Лето</b> и <b>Осень</b>. Вместе они образуют 4 лепестка времени.
                 </p>
             </div>
 
             <div class="story-card" style="border-left-color:#00ffaa;">
                 <h4>
-                    <span>3. Как происходит смена сезона?</span>
-                    <button class="cam-btn" data-cam="side">Вид сбоку</button>
+                    <span>3. День вне времени в центре (0, 0, 0)</span>
+                    <button class="cam-btn" data-cam="center">Центр</button>
                 </h4>
                 <p>
-                    Свет не перепрыгивает по внешним краям. Чтобы сменить время года, поток из активного витка <b>стягивается в центральную S-петлю</b>, меняет направление на 90° (как в гироскопе) и перетекает в следующий сезон: <b>Зима → Весна → Лето → Осень</b>.
+                    В 13-лунном ритме (13×28 = 364 дня = ровно 52 недели по 7 дней) остаётся <b>365-й день — День вне времени</b>. В Сфирали он попадает точно в <b>центральный узел инверсии (0, 0, 0)</b>.
+                </p>
+            </div>
+
+            <div class="story-card" style="border-left-color:#ef4444;">
+                <h4>
+                    <span>4. Цолькин (20 печатей × 13 тонов)</span>
+                    <button class="cam-btn" data-cam="side">Сбоку</button>
+                </h4>
+                <p>
+                    Священный цикл из <b>260 Кинов</b>: 20 солнечных печатей сменяются каждый день по кругу 4 цветов (Красный → Белый → Синий → Жёлтый) в сочетании с 13 галактическими тонами.
                 </p>
             </div>
         </div>
     </div>
 
-    <!-- Правая панель: настройки сцены -->
+    <!-- Правая панель: Календари, Дни недели, Печати Цолькина и настройки сцены -->
     <div class="side-panel" id="rightPanel">
         <div class="panel-head">
-            <span>⚙️ Настройки сцены</span>
-            <button class="collapse-btn" id="collapseRightBtn" title="Свернуть">▶</button>
+            <span>📅 Календарь, Печати и Сцена</span>
+            <button class="collapse-btn" id="collapseRightBtn" title="Свернуть">✕</button>
         </div>
         <div class="panel-body">
-                        <div class="ctrl-group">
-                <div class="ctrl-title">Скорость и вращение</div>
-                <div class="slider-row">
-                    <div class="slider-label">
-                        <span>Скорость течения года</span>
-                        <strong id="valSpeed">0.8×</strong>
-                    </div>
-                    <input type="range" id="rngSpeed" min="0.1" max="2.0" step="0.1" value="0.8">
+            <!-- Режим календаря -->
+            <div class="ctrl-group">
+                <div class="ctrl-title">
+                    <span>Режим отображения</span>
+                    <button class="step-btn" id="btnTodayDate" title="Перейти на сегодняшнюю дату">Сегодня</button>
                 </div>
                 <div class="preset-row">
-                    <button class="mini-btn active" data-rot="off">Без вращения</button>
-                    <button class="mini-btn" data-rot="y">Вращать Y</button>
-                    <button class="mini-btn" data-rot="3d">3D-облет</button>
+                    <button class="mini-btn active" data-calmode="seasons">4 Сезона</button>
+                    <button class="mini-btn" data-calmode="gregorian">Григорианский</button>
+                    <button class="mini-btn" data-calmode="tzolkin">Цолькин</button>
+                </div>
+                <button class="oot-btn" id="btnJumpOutOfTime">✨ День вне времени · Центр (0, 0, 0)</button>
+            </div>
+
+            <!-- Блок Григорианского календаря и дней недели -->
+            <div class="ctrl-group">
+                <div class="ctrl-title">
+                    <span>Григорианский календарь и неделя</span>
+                    <div class="step-nav">
+                        <button class="step-btn" id="btnPrevDay" title="На 1 день назад">◀ −1д</button>
+                        <button class="step-btn" id="btnNextDay" title="На 1 день вперёд">+1д ▶</button>
+                    </div>
+                </div>
+                <div class="cal-card">
+                    <div class="cal-header-row">
+                        <div class="cal-main-val" id="panelCalTitle">Воскресенье, 21 декабря</div>
+                        <span style="font-size:0.68rem; color:#7dd3fc; font-weight:700;" id="panelWeekBadge">Нед. 51</span>
+                    </div>
+                    <div class="cal-sub-val" id="panelCalDetails">День года: 355 / 365 · Зима</div>
+
+                    <!-- Полоса 7 дней недели -->
+                    <div class="weekday-strip" id="panelWeekdayStrip"></div>
+
+                    <!-- Мини-сетка текущего месяца -->
+                    <div class="mini-month-grid" id="panelMonthGrid"></div>
+
+                    <div class="cal-input-row">
+                        <input type="date" id="inpGregDate" class="cal-input" title="Выбрать точную дату">
+                    </div>
                 </div>
             </div>
 
+            <!-- Блок Печатей Цолькина (20 печатей + 13 тонов) -->
             <div class="ctrl-group">
-                <div class="ctrl-title">Свет и прозрачность</div>
+                <div class="ctrl-title">
+                    <span>Цолькин · 20 Солнечных Печатей</span>
+                    <div class="step-nav">
+                        <button class="step-btn" id="btnPrevKin" title="Предыдущий Кин">◀ −1</button>
+                        <button class="step-btn" id="btnNextKin" title="Следующий Кин">+1 ▶</button>
+                    </div>
+                </div>
+
+                <!-- Активная печать крупно + тон майя -->
+                <div class="tzolkin-hero" id="tzolkinHeroCard">
+                    <div class="glyph-box" id="heroGlyphBox"></div>
+                    <div class="tzolkin-meta">
+                        <div class="tzolkin-kin-title" id="heroKinTitle">Кин 1 · Магнитный Имиш</div>
+                        <div class="tzolkin-seal-sub" id="heroSealSub">Печать: Крокодил · Красный (Восток)</div>
+                        <div class="maya-tone-bar">
+                            <div class="maya-numeral" id="heroMayaNumeral" title="Запись тона числами майя (точка = 1, черта = 5)"></div>
+                            <span style="font-size:0.67rem; color:#cbd5e1;" id="heroToneName">Тон 1 · Магнитный</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Матрица всех 20 печатей -->
+                <div class="seals-matrix" id="sealsMatrixGrid"></div>
+            </div>
+
+            <!-- Скорость течения дней -->
+            <div class="ctrl-group">
+                <div class="ctrl-title">Скорость течения дней</div>
+                <div class="slider-row">
+                    <div class="slider-label">
+                        <span>Темп переключения</span>
+                        <strong id="valSpeed">0.25× (~2.4с/день)</strong>
+                    </div>
+                    <input type="range" id="rngSpeed" min="0.05" max="2.0" step="0.05" value="0.25">
+                </div>
+                <div class="preset-row">
+                    <button class="mini-btn active" data-speedpreset="0.25">Плавно (0.25×)</button>
+                    <button class="mini-btn" data-speedpreset="0.6">Средне (0.6×)</button>
+                    <button class="mini-btn" data-speedpreset="1.5">Быстро (1.5×)</button>
+                </div>
+            </div>
+
+            <!-- Свет и цвета -->
+            <div class="ctrl-group">
+                <div class="ctrl-title">Свет и цвета</div>
                 <div class="slider-row">
                     <div class="slider-label">
                         <span>Толщина линий</span>
@@ -511,37 +1174,63 @@
                 </div>
                 <div class="slider-row">
                     <div class="slider-label">
-                        <span>Цвета характеристик</span>
+                        <span>Палитра</span>
                         <strong id="valColorMode">4 сезона</strong>
                     </div>
                     <div class="preset-row">
                         <button class="mini-btn active" data-colormode="seasons4">4 сезона</button>
-                        <button class="mini-btn" data-colormode="poles2">2 полюса (N/S)</button>
+                        <button class="mini-btn" data-colormode="poles2">Компас N–S</button>
                     </div>
                 </div>
             </div>
 
+            <!-- Подсказки в 3D -->
             <div class="ctrl-group">
                 <div class="ctrl-title">Подсказки в 3D</div>
                 <div class="toggle-row">
-                    <span>Названия сезонов</span>
+                    <span>Подписи лепестков и центра</span>
                     <button class="switch-btn" id="tglLabels">ВКЛ</button>
                 </div>
                 <div class="toggle-row">
-                    <span>Линза и ось активного сезона</span>
+                    <span>Линза и ось сезона</span>
                     <button class="switch-btn off" id="tglPlane">ВЫКЛ</button>
                 </div>
                 <div class="toggle-row">
-                    <span>Центральный узел перехода</span>
+                    <span>Центральный узел</span>
                     <button class="switch-btn" id="tglCore">ВКЛ</button>
                 </div>
-
             </div>
         </div>
     </div>
 
-    <!-- Нижняя панель: субтитр и шкала года -->
+    <!-- Нижняя панель: переключатель календарей, дни недели, печать Цолькина и шкала -->
     <div id="bottomBar">
+        <div class="cal-strip">
+            <div class="cal-tabs">
+                <button class="cal-tab active" data-calmode="seasons">4 Сезона</button>
+                <button class="cal-tab" data-calmode="gregorian">Григорианский</button>
+                <button class="cal-tab" data-calmode="tzolkin">Цолькин</button>
+                <button class="cal-tab oot-pill" id="btnBottomOutOfTime" title="Перейти в центральный узел инверсии (День вне времени)">✨ Вне времени</button>
+            </div>
+
+            <!-- Живая полоска дней недели + пошаговые кнопки -->
+            <div class="live-cal-widget">
+                <button class="mini-step-btn" id="btnBottomPrevDay" title="На 1 день назад">◀</button>
+                <div class="mini-wd-bar" id="bottomWeekdayBar"></div>
+                <button class="mini-step-btn" id="btnBottomNextDay" title="На 1 день вперёд">▶</button>
+
+                <!-- Бейдж активной печати Цолькина -->
+                <div class="bottom-seal-pill" id="bottomSealPill" title="Открыть матрицу 20 печатей Цолькина">
+                    <div class="bottom-seal-icon" id="bottomSealIcon"></div>
+                    <span class="bottom-seal-text" id="bottomSealText">1 Имиш</span>
+                </div>
+            </div>
+
+            <div id="calendarReadout">
+                <span class="cal-badge">Вс, 21 дек · 355/365</span>
+            </div>
+        </div>
+
         <div class="subtitle-row">
             <div id="subtitleText">
                 <strong style="color:#38bdf8;">1. ЗИМА:</strong> Энергия собрана в первом витке.
@@ -568,10 +1257,273 @@
         import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
         // =========================================================================
-        // 1. ГЕОМЕТРИЯ СФИРАЛИ (КАНОНИЧЕСКАЯ ФОРМА ИЗ КОНСТРУКТОРА)
+        // 1. КАЛЕНДАРНАЯ ЛОГИКА, ДНИ НЕДЕЛИ И 20 ПЕЧАТЕЙ ЦОЛЬКИНА С SVG-ГЛИФАМИ
         // =========================================================================
-        const SQUARE_STRETCH = 0.7778;
+        const MONTHS_RU = [
+            'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+            'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+        ];
+        const MONTHS_NOM_RU = [
+            'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+            'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+        ];
+        const MONTHS_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        const WEEKDAYS_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+        const WEEKDAYS_FULL = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
 
+        // 20 Солнечных Печатей Цолькина с авторскими векторными глифами в стиле майя
+        const TZOLKIN_SEALS = [
+            {
+                maya: 'Имиш', ru: 'Крокодил', dir: 'Восток', color: '#ef4444',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M11 11v6M18 10v7M25 11v6"/>
+                    <circle cx="18" cy="23" r="4"/>
+                </svg>`
+            },
+            {
+                maya: 'Ик', ru: 'Ветер', dir: 'Север', color: '#f8fafc',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#f8fafc" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M12 12h12v5H15v5h9v4H12"/>
+                </svg>`
+            },
+            {
+                maya: 'Акбаль', ru: 'Ночь', dir: 'Запад', color: '#3b82f6',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M10 14c3 4 13 4 16 0"/>
+                    <circle cx="13" cy="22" r="2.2"/><circle cx="23" cy="22" r="2.2"/>
+                </svg>`
+            },
+            {
+                maya: 'Кан', ru: 'Семя', dir: 'Юг', color: '#eab308',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#eab308" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M18 9c5 4 7 9 0 18-7-9-5-14 0-18z"/>
+                    <circle cx="18" cy="19" r="2"/>
+                </svg>`
+            },
+            {
+                maya: 'Чикчан', ru: 'Змей', dir: 'Восток', color: '#ef4444',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M11 24c0-5 14-3 14-8s-14-3-14-6"/>
+                    <circle cx="23" cy="11" r="1.5" fill="#ef4444"/>
+                </svg>`
+            },
+            {
+                maya: 'Кими', ru: 'Соединитель миров', dir: 'Север', color: '#f8fafc',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#f8fafc" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <circle cx="14" cy="16" r="2.5"/><circle cx="22" cy="16" r="2.5"/>
+                    <path d="M12 24h12M15 21v6M21 21v6"/>
+                </svg>`
+            },
+            {
+                maya: 'Маник', ru: 'Рука', dir: 'Запад', color: '#3b82f6',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M13 25v-8a2 2 0 0 1 4 0v4m0-5a2 2 0 0 1 4 0v5m0-3a2 2 0 0 1 4 0v7c0 3-3 4-6 4h-3c-2 0-3-1-3-4"/>
+                </svg>`
+            },
+            {
+                maya: 'Ламат', ru: 'Звезда', dir: 'Юг', color: '#eab308',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#eab308" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <circle cx="18" cy="18" r="3"/>
+                    <circle cx="12" cy="12" r="2"/><circle cx="24" cy="12" r="2"/>
+                    <circle cx="12" cy="24" r="2"/><circle cx="24" cy="24" r="2"/>
+                </svg>`
+            },
+            {
+                maya: 'Мулук', ru: 'Луна', dir: 'Восток', color: '#ef4444',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <circle cx="18" cy="18" r="6"/>
+                    <path d="M12 18c3-3 9-3 12 0"/>
+                </svg>`
+            },
+            {
+                maya: 'Ок', ru: 'Собака', dir: 'Север', color: '#f8fafc',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#f8fafc" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M18 26c-6-4-8-9-4-12 2-1.5 4 0 4 2 0-2 2-3.5 4-2 4 3 2 8-4 12z"/>
+                </svg>`
+            },
+            {
+                maya: 'Чуэн', ru: 'Обезьяна', dir: 'Запад', color: '#3b82f6',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M18 18c2 0 3-2 2-4-1.5-2.5-5-2-6.5 0.5-2 3-1 7.5 2.5 9 4 1.5 8-1 8.5-5"/>
+                </svg>`
+            },
+            {
+                maya: 'Эб', ru: 'Человек', dir: 'Юг', color: '#eab308',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#eab308" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <circle cx="18" cy="13" r="3"/>
+                    <path d="M11 25c2-4 12-4 14 0M18 16v6"/>
+                </svg>`
+            },
+            {
+                maya: 'Бен', ru: 'Странник', dir: 'Восток', color: '#ef4444',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M13 10v16M23 10v16M10 15h16M10 21h16"/>
+                </svg>`
+            },
+            {
+                maya: 'Иш', ru: 'Маг', dir: 'Север', color: '#f8fafc',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#f8fafc" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <circle cx="13" cy="14" r="2"/><circle cx="23" cy="14" r="2"/>
+                    <path d="M12 22c3 3 9 3 12 0M18 18v4"/>
+                </svg>`
+            },
+            {
+                maya: 'Мен', ru: 'Орёл', dir: 'Запад', color: '#3b82f6',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M10 15c4-3 12-3 16 0M13 20c3-2 7-2 10 0M18 13v12"/>
+                </svg>`
+            },
+            {
+                maya: 'Киб', ru: 'Воин', dir: 'Юг', color: '#eab308',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#eab308" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <polygon points="18,10 26,18 18,26 10,18"/>
+                    <circle cx="18" cy="18" r="2.2"/>
+                </svg>`
+            },
+            {
+                maya: 'Кабан', ru: 'Земля', dir: 'Восток', color: '#ef4444',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M11 18h14M18 11v14"/>
+                    <circle cx="18" cy="18" r="5"/>
+                </svg>`
+            },
+            {
+                maya: 'Эцнаб', ru: 'Зеркало', dir: 'Север', color: '#f8fafc',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#f8fafc" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M11 11l14 14M25 11L11 25"/>
+                    <polygon points="18,12 24,18 18,24 12,18"/>
+                </svg>`
+            },
+            {
+                maya: 'Кавак', ru: 'Буря', dir: 'Запад', color: '#3b82f6',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <path d="M19 10l-5 8h6l-3 8"/>
+                    <circle cx="13" cy="13" r="1.5"/><circle cx="24" cy="22" r="1.5"/>
+                </svg>`
+            },
+            {
+                maya: 'Ахау', ru: 'Солнце', dir: 'Юг', color: '#eab308',
+                svg: `<svg viewBox="0 0 36 36" fill="none" stroke="#eab308" stroke-width="2.2" stroke-linecap="round">
+                    <rect x="5" y="5" width="26" height="26" rx="6"/>
+                    <circle cx="18" cy="18" r="6"/>
+                    <circle cx="15.8" cy="16.5" r="1" fill="#eab308"/><circle cx="20.2" cy="16.5" r="1" fill="#eab308"/>
+                    <path d="M15.5 20.5h5"/>
+                </svg>`
+            }
+        ];
+
+        const TZOLKIN_TONES = [
+            'Магнитный', 'Лунный', 'Электрический', 'Самосущный', 'Обертонный',
+            'Ритмический', 'Резонансный', 'Галактический', 'Солнечный', 'Планетарный',
+            'Спектральный', 'Кристаллический', 'Космический'
+        ];
+
+        // 2026 год: 1 января 2026 — Четверг (индекс 3 при 0=Пн)
+        const YEAR_START_WD_2026 = 3;
+        const WINTER_SOLSTICE_DOY = 355; // 21 декабря
+
+        function getGregorianFromT(normT) {
+            const offsetDays = Math.floor(normT * 365);
+            let doy = ((WINTER_SOLSTICE_DOY - 1 + offsetDays) % 365) + 1; // 1..365
+            let rem = doy;
+            let monthIdx = 0;
+            while (monthIdx < 11 && rem > MONTHS_DAYS[monthIdx]) {
+                rem -= MONTHS_DAYS[monthIdx];
+                monthIdx++;
+            }
+            const dayOfMonth = rem;
+            const monthStr = String(monthIdx + 1).padStart(2, '0');
+            const dayStr = String(dayOfMonth).padStart(2, '0');
+            const wdIdx = (YEAR_START_WD_2026 + (doy - 1)) % 7; // 0=Пн .. 6=Вс
+            const weekNum = Math.floor((doy + YEAR_START_WD_2026 - 1) / 7) + 1;
+
+            return {
+                doy,
+                day: dayOfMonth,
+                monthIdx,
+                wdIdx,
+                wdShort: WEEKDAYS_SHORT[wdIdx],
+                wdFull: WEEKDAYS_FULL[wdIdx],
+                weekNum,
+                label: `${dayOfMonth} ${MONTHS_RU[monthIdx]}`,
+                monthTitle: `${MONTHS_NOM_RU[monthIdx]} 2026`,
+                iso: `2026-${monthStr}-${dayStr}`
+            };
+        }
+
+        function getTFromDoy(doy) {
+            let clamped = Math.max(1, Math.min(365, doy));
+            const delta = (clamped - WINTER_SOLSTICE_DOY + 365) % 365;
+            return (delta + 0.5) / 365;
+        }
+
+        function getTFromDate(dateObj) {
+            const start = new Date(dateObj.getFullYear(), 0, 0);
+            const diff = dateObj - start;
+            const oneDay = 1000 * 60 * 60 * 24;
+            const doy = Math.floor(diff / oneDay);
+            return getTFromDoy(doy);
+        }
+
+        function getTzolkinFromT(normT) {
+            const kin = Math.floor(normT * 260) % 260; // 0..259
+            const kinNum = kin + 1; // 1..260
+            const tone = (kin % 13) + 1; // 1..13
+            const sealIdx = kin % 20; // 0..19
+            const seal = TZOLKIN_SEALS[sealIdx];
+            const toneName = TZOLKIN_TONES[tone - 1];
+            return {
+                kin,
+                kinNum,
+                tone,
+                toneName,
+                sealIdx,
+                seal,
+                shortLabel: `${tone} ${seal.maya}`,
+                fullLabel: `Кин ${kinNum}/260 · ${toneName} ${seal.maya} (${seal.ru})`
+            };
+        }
+
+        function renderMayaNumeralHTML(tone, color) {
+            const bars = Math.floor(tone / 5);
+            const dots = tone % 5;
+            let dotsHtml = '';
+            if (dots > 0) {
+                dotsHtml = '<div class="maya-dots">' + Array.from({ length: dots }, () =>
+                    `<span class="maya-dot" style="background:${color};"></span>`
+                ).join('') + '</div>';
+            }
+            let barsHtml = '';
+            if (bars > 0) {
+                barsHtml = '<div class="maya-bars">' + Array.from({ length: bars }, () =>
+                    `<span class="maya-bar" style="background:${color};"></span>`
+                ).join('') + '</div>';
+            }
+            return `${dotsHtml}${barsHtml}`;
+        }
+
+        // =========================================================================
+        // 2. ГЕОМЕТРИЯ СФИРАЛИ (КАНОНИЧЕСКАЯ ФОРМА)
+        // =========================================================================
         function generateRightBranch(R, H) {
             const mainPts = [];
             const junctionZ = H / 5;
@@ -617,7 +1569,7 @@
         }
 
         // =========================================================================
-        // 2. СОСТОЯНИЕ ПРИЛОЖЕНИЯ
+        // 3. СОСТОЯНИЕ ПРИЛОЖЕНИЯ
         // =========================================================================
         const SINGLE_NODES = [
             { id: 1, x: 0, y: 0, z: 0, params: { N: 5, scale: 1.0, stretch: 0.7778, angles: [0, 0, 0] } }
@@ -629,24 +1581,26 @@
 
         const state = {
             mode: 'duplex',
+            calendarMode: 'seasons', // 'seasons' | 'gregorian' | 'tzolkin'
             nodes: JSON.parse(JSON.stringify(DUPLEX_NODES)),
             playing: true,
             camFollow: true,
-            speed: 0.8,
+            speed: 0.25,
             t: 0.06,
             stretch: 0.7778,
-            autoRotate: 'off',
-            colorMode: 'seasons4', // 'seasons4' | 'poles2'
+            
+            colorMode: 'seasons4',
             tubeRadius: 0.5,
             bloomStrength: 0.45,
             glassOpacity: 0.5,
             showLabels: true,
             showPlane: false,
-            showCore: true
+            showCore: true,
+            inOutOfTimeZone: false
         };
 
         // =========================================================================
-        // 3. СЦЕНА THREE.JS
+        // 4. СЦЕНА THREE.JS
         // =========================================================================
         const container = document.getElementById('canvasContainer');
         const scene = new THREE.Scene();
@@ -667,7 +1621,6 @@
         controls.dampingFactor = 0.07;
         controls.target.set(0, 0, 0);
 
-        // Если пользователь начинает крутить камеру вручную — отключаем авто-слежение камеры, чтобы не мешать
         controls.addEventListener('start', () => {
             if (state.camFollow) {
                 state.camFollow = false;
@@ -690,15 +1643,11 @@
         dirLight.position.set(140, 200, 180);
         scene.add(dirLight);
 
-
-
         const modelRoot = new THREE.Group();
         scene.add(modelRoot);
 
-        // Линза активной плоскости со встроенной осью (показывает плоскость и ось текущего сезона)
+        // Линза активной плоскости со встроенной осью
         const activePlaneGroup = new THREE.Group();
-
-        // 1. Внешний ободок линзы (деликатный, полупрозрачный)
         const ringGeo = new THREE.RingGeometry(82.0, 82.9, 96);
         const ringMat = new THREE.MeshBasicMaterial({
             color: 0x38bdf8,
@@ -709,7 +1658,6 @@
         });
         const activePlaneRing = new THREE.Mesh(ringGeo, ringMat);
 
-        // 2. Полупрозрачное стекло самой линзы
         const discGeo = new THREE.CircleGeometry(82.0, 96);
         const discMat = new THREE.MeshBasicMaterial({
             color: 0x38bdf8,
@@ -720,7 +1668,6 @@
         });
         const activePlaneDisc = new THREE.Mesh(discGeo, discMat);
 
-        // 3. Ось активного сезона под 90° к плоскости линзы (вдоль нормали Z)
         const axisGroup = new THREE.Group();
         const axisMat = new THREE.MeshBasicMaterial({
             color: 0x38bdf8,
@@ -735,14 +1682,9 @@
             depthWrite: false
         });
 
-        // Главная ось строго под 90° относительно плоскости линзы (вдоль оси Z)
-        const normalAxisRod = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.75, 0.75, 168, 14),
-            axisMat
-        );
+        const normalAxisRod = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 168, 14), axisMat);
         normalAxisRod.rotation.x = Math.PI / 2;
 
-        // Наконечники-конусы на обоих концах оси, перпендикулярной линзе
         const tipFront = new THREE.Mesh(new THREE.ConeGeometry(2.5, 7.5, 16), axisMat);
         tipFront.position.z = 86;
         tipFront.rotation.x = Math.PI / 2;
@@ -751,35 +1693,37 @@
         tipBack.position.z = -86;
         tipBack.rotation.x = -Math.PI / 2;
 
-        // Тонкие направляющие диаметры в самой плоскости линзы
-        const mainAxisRod = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.32, 0.32, 163, 10),
-            crossAxisMat
-        );
-        const crossAxisRod = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.32, 0.32, 163, 10),
-            crossAxisMat
-        );
+        const mainAxisRod = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 163, 10), crossAxisMat);
+        const crossAxisRod = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 163, 10), crossAxisMat);
         crossAxisRod.rotation.z = Math.PI / 2;
 
         axisGroup.add(normalAxisRod, tipFront, tipBack, mainAxisRod, crossAxisRod);
         activePlaneGroup.add(activePlaneRing, activePlaneDisc, axisGroup);
         scene.add(activePlaneGroup);
 
-        // Центральный узел перехода (0, 0, 0)
+        // Центральный узел перехода (0, 0, 0) — День вне времени
         const coreGroup = new THREE.Group();
+        const coreSphereMat = new THREE.MeshBasicMaterial({ color: 0x00ffaa });
         const coreSphere = new THREE.Mesh(
-            new THREE.SphereGeometry(3.5, 24, 24),
-            new THREE.MeshBasicMaterial({ color: 0x00ffaa })
+            new THREE.SphereGeometry(3.6, 24, 24),
+            coreSphereMat
         );
+        const coreHaloMat = new THREE.MeshBasicMaterial({ color: 0x00ffaa, transparent: true, opacity: 0.25 });
         const coreHalo = new THREE.Mesh(
-            new THREE.SphereGeometry(7.5, 24, 24),
-            new THREE.MeshBasicMaterial({ color: 0x00ffaa, transparent: true, opacity: 0.25 })
+            new THREE.SphereGeometry(7.8, 24, 24),
+            coreHaloMat
         );
-        coreGroup.add(coreSphere, coreHalo);
+        const coreRingMat = new THREE.MeshBasicMaterial({
+            color: 0xc084fc,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.35
+        });
+        const coreRing = new THREE.Mesh(new THREE.RingGeometry(10.5, 11.8, 48), coreRingMat);
+        coreGroup.add(coreSphere, coreHalo, coreRing);
         scene.add(coreGroup);
 
-        // Комета: насыщенная точка-голова и длинный шлейф с плавным растворением хвоста
+        // Комета со шлейфом
         const trailCount = 36;
         const trailMeshes = [];
         const trailGroup = new THREE.Group();
@@ -801,13 +1745,14 @@
         scene.add(trailGroup);
 
         // =========================================================================
-        // 4. ПОСТРОЕНИЕ ВОЛНОВОДОВ, СЕЗОННЫХ СЕГМЕНТОВ И ТРАЕКТОРИИ ПОТОКА
+        // 5. ПОСТРОЕНИЕ ВОЛНОВОДОВ, СЕГМЕНТОВ И ПОДПИСЕЙ
         // =========================================================================
-        let segmentMaterials = {}; // { winter, spring, summer, autumn, s1, s2 }
-        let flowPath = []; // { pos, seasonKey, subtitle, color, planeRotY, camPos }
+        let segmentMaterials = {};
+        let flowPath = [];
         let flowCurve = null;
         let flowSamples = [];
-        let floatingLabels = []; // { anchorPos, labelPos, title, sub, color, seasonKey }
+        let centerUValues = [];
+        let floatingLabels = [];
         const labelsLayer = document.getElementById('labelsLayer');
         const leaderLinesSvg = document.getElementById('leaderLinesSvg');
 
@@ -850,14 +1795,41 @@
             if (pills[2]) { pills[2].style.color = su.css; pills[2].style.borderColor = su.css; pills[2].style.background = 'rgba(34,197,94,0.16)'; }
             if (pills[3]) { pills[3].style.color = au.css; pills[3].style.borderColor = au.css; pills[3].style.background = 'rgba(234,179,8,0.16)'; }
 
-            document.getElementById('valColorMode').textContent = state.colorMode === 'poles2' ? '2 полюса (N/S)' : '4 сезона';
+            const isCompassMode = state.colorMode === 'poles2';
+            document.getElementById('valColorMode').textContent = isCompassMode ? 'Компас N–S' : '4 сезона';
+            const compassHud = document.getElementById('compassHud');
+            if (compassHud) compassHud.classList.toggle('compass-focus', isCompassMode);
+        }
+
+        function getLabelsForCalendarMode(cW, cSp, cSu, cAu) {
+            if (state.calendarMode === 'gregorian') {
+                return [
+                    { title: '21 ДЕК — 20 МАР', sub: 'I квадрант (Зима · 90 дн.)', color: cW, seasonKey: 'winter' },
+                    { title: '21 МАР — 20 ИЮН', sub: 'II квадрант (Весна · 92 дн.)', color: cSp, seasonKey: 'spring' },
+                    { title: '21 ИЮН — 22 СЕН', sub: 'III квадрант (Лето · 94 дн.)', color: cSu, seasonKey: 'summer' },
+                    { title: '23 СЕН — 20 ДЕК', sub: 'IV квадрант (Осень · 89 дн.)', color: cAu, seasonKey: 'autumn' }
+                ];
+            }
+            if (state.calendarMode === 'tzolkin') {
+                return [
+                    { title: 'КИН 1 — 65 · Имиш→Чикчан', sub: 'Восточный Красный Замок', color: cW, seasonKey: 'winter' },
+                    { title: 'КИН 66 — 130 · Кими→Иш', sub: 'Северный Белый Замок', color: cSp, seasonKey: 'spring' },
+                    { title: 'КИН 131 — 195 · Чуэн→Кавак', sub: 'Западный Синий Замок', color: cSu, seasonKey: 'summer' },
+                    { title: 'КИН 196 — 260 · Киб→Ахау', sub: 'Южный Жёлтый Замок', color: cAu, seasonKey: 'autumn' }
+                ];
+            }
+            return [
+                { title: '1. ЗИМА', sub: state.mode === 'single' ? 'Большой виток 1' : 'Сфираль I · виток 1', color: cW, seasonKey: 'winter' },
+                { title: '2. ВЕСНА', sub: state.mode === 'single' ? 'Полувиток S₁' : 'Сфираль I · виток 2', color: cSp, seasonKey: 'spring' },
+                { title: '3. ЛЕТО', sub: state.mode === 'single' ? 'Большой виток 2' : 'Сфираль II · виток 1', color: cSu, seasonKey: 'summer' },
+                { title: '4. ОСЕНЬ', sub: state.mode === 'single' ? 'Полувиток S₂' : 'Сфираль II · виток 2', color: cAu, seasonKey: 'autumn' }
+            ];
         }
 
         function createTube(points, colorHex, radius, glassOpacity) {
             const curve = new THREE.CatmullRomCurve3(points);
             const group = new THREE.Group();
 
-            // Чёткий внутренний каркас линии
             const coreGeo = new THREE.TubeGeometry(curve, Math.max(points.length, 64), radius * 0.72, 10, false);
             const coreMat = new THREE.MeshBasicMaterial({
                 color: colorHex,
@@ -887,6 +1859,7 @@
             segmentMaterials = {};
             flowPath = [];
             floatingLabels = [];
+            centerUValues = [];
 
             const builtNodes = [];
 
@@ -903,20 +1876,14 @@
 
                 const isSingleMode = state.nodes.length === 1;
                 const isFirst = idx === 0;
-                // В режиме "Одна Сфираль": витки = Зима и Лето, полувитки S = Весна и Осень
-                // В режиме "Сфираль-дюплекс": по пол-Сфирали на сезон (I: Зима / Весна, II: Лето / Осень)
                 const cRight = isSingleMode
                     ? getSeasonColorInfo('winter').hex
                     : (isFirst ? getSeasonColorInfo('winter').hex : getSeasonColorInfo('summer').hex);
-                const cS1 = isSingleMode
-                    ? getSeasonColorInfo('spring').hex
-                    : cRight;
+                const cS1 = isSingleMode ? getSeasonColorInfo('spring').hex : cRight;
                 const cLeft = isSingleMode
                     ? getSeasonColorInfo('summer').hex
                     : (isFirst ? getSeasonColorInfo('spring').hex : getSeasonColorInfo('autumn').hex);
-                const cS2 = isSingleMode
-                    ? getSeasonColorInfo('autumn').hex
-                    : cLeft;
+                const cS2 = isSingleMode ? getSeasonColorInfo('autumn').hex : cLeft;
 
                 const tRight = createTube(segs.rightPts, cRight, state.tubeRadius, state.glassOpacity);
                 const tSRight = createTube(segs.sRightPts, cS1, state.tubeRadius * 0.9, state.glassOpacity);
@@ -943,11 +1910,11 @@
                 modelRoot.add(nodeGroup);
             });
 
-            // Формируем плавный маршрут потока энергии и понятные подписи
             const cW = getSeasonColorInfo('winter').css;
             const cSp = getSeasonColorInfo('spring').css;
             const cSu = getSeasonColorInfo('summer').css;
             const cAu = getSeasonColorInfo('autumn').css;
+            const labelDefs = getLabelsForCalendarMode(cW, cSp, cSu, cAu);
 
             if (builtNodes.length === 1) {
                 const n1 = builtNodes[0];
@@ -966,7 +1933,6 @@
                     }));
                 };
 
-                // 1. ЗИМА = первый большой виток
                 rightPts.forEach(p => flowPath.push({
                     pos: n1.toWorld(p),
                     seasonKey: 'winter',
@@ -976,7 +1942,6 @@
                     subtitle: `<strong style="color:${cW};">1. ЗИМА (Виток 1):</strong> Первый большой виток Сфирали.`
                 }));
 
-                // 2. ВЕСНА = первый полувиток S-петли (к центру 0,0,0)
                 sRightPts.forEach(p => flowPath.push({
                     pos: n1.toWorld(p),
                     seasonKey: 'spring',
@@ -986,7 +1951,6 @@
                     subtitle: `<strong style="color:${cSp};">2. ВЕСНА (Полувиток S₁):</strong> Переходный полувиток S-петли к центру.`
                 }));
 
-                // Переход на начало второго большого витка (Лето)
                 pushSingleBridge(
                     n1.toWorld(sRightPts[sRightPts.length - 1]),
                     n1.toWorld(leftPts[0]),
@@ -996,7 +1960,6 @@
                     `<strong style="color:${cSu};">3. ЛЕТО (Виток 2):</strong> Переход на второй большой виток Сфирали.`
                 );
 
-                // 3. ЛЕТО = второй большой виток
                 leftPts.forEach(p => flowPath.push({
                     pos: n1.toWorld(p),
                     seasonKey: 'summer',
@@ -1006,7 +1969,6 @@
                     subtitle: `<strong style="color:${cSu};">3. ЛЕТО (Виток 2):</strong> Второй зеркальный виток Сфирали.`
                 }));
 
-                // 4. ОСЕНЬ = второй полувиток S-петли (к центру 0,0,0)
                 sLeftPts.forEach(p => flowPath.push({
                     pos: n1.toWorld(p),
                     seasonKey: 'autumn',
@@ -1016,7 +1978,6 @@
                     subtitle: `<strong style="color:${cAu};">4. ОСЕНЬ (Полувиток S₂):</strong> Второй переходный полувиток S-петли к центру.`
                 }));
 
-                // Замыкание цикла на начало Зимы (Виток 1)
                 pushSingleBridge(
                     n1.toWorld(sLeftPts[sLeftPts.length - 1]),
                     n1.toWorld(rightPts[0]),
@@ -1032,10 +1993,10 @@
                 const auAnchor = n1.toWorld(sLeftPts[30]);
 
                 floatingLabels.push(
-                    { anchorPos: wAnchor, labelPos: makeMidCoilLabelPos(wAnchor, 1.14), title: '1. ЗИМА', sub: 'Большой виток 1', color: cW, seasonKey: 'winter' },
-                    { anchorPos: spAnchor, labelPos: new THREE.Vector3(spAnchor.x * 1.45, spAnchor.y + 22, spAnchor.z), title: '2. ВЕСНА', sub: 'Полувиток S₁', color: cSp, seasonKey: 'spring' },
-                    { anchorPos: suAnchor, labelPos: makeMidCoilLabelPos(suAnchor, 1.14), title: '3. ЛЕТО', sub: 'Большой виток 2', color: cSu, seasonKey: 'summer' },
-                    { anchorPos: auAnchor, labelPos: new THREE.Vector3(auAnchor.x * 1.45, auAnchor.y - 22, auAnchor.z), title: '4. ОСЕНЬ', sub: 'Полувиток S₂', color: cAu, seasonKey: 'autumn' }
+                    { anchorPos: wAnchor, labelPos: makeMidCoilLabelPos(wAnchor, 1.14), ...labelDefs[0] },
+                    { anchorPos: spAnchor, labelPos: new THREE.Vector3(spAnchor.x * 1.45, spAnchor.y + 22, spAnchor.z), ...labelDefs[1] },
+                    { anchorPos: suAnchor, labelPos: makeMidCoilLabelPos(suAnchor, 1.14), ...labelDefs[2] },
+                    { anchorPos: auAnchor, labelPos: new THREE.Vector3(auAnchor.x * 1.45, auAnchor.y - 22, auAnchor.z), ...labelDefs[3] }
                 );
             } else if (builtNodes.length >= 2) {
                 const n1 = builtNodes[0];
@@ -1054,7 +2015,6 @@
                     }));
                 };
 
-                // 1. ЗИМА = 1-я пол-Сфирали I (виток + пол-витка S до центра)
                 n1.segs.rightPts.forEach(p => flowPath.push({
                     pos: n1.toWorld(p),
                     seasonKey: 'winter',
@@ -1072,7 +2032,6 @@
                     subtitle: `<strong style="color:${cW};">1. ЗИМА → ЦЕНТР (0,0,0):</strong> Вход в центр Сфирали I, смена сезона.`
                 }));
 
-                // 2. ВЕСНА = 2-я пол-Сфирали I (пол-витка S от центра + виток)
                 [...n1.segs.sLeftPts].reverse().forEach(p => flowPath.push({
                     pos: n1.toWorld(p),
                     seasonKey: 'spring',
@@ -1139,8 +2098,6 @@
                     );
                 }
 
-                // 3. ЛЕТО (1-я пол-Сфирали II: виток + пол-витка S до центра)
-                // и 4. ОСЕНЬ (2-я пол-Сфирали II: пол-витка S от центра + виток)
                 for (let i = 0; i < orderedN2.length; i++) {
                     const curr = orderedN2[i];
                     const isSummerHalf = (curr.phase === 'turnA' || curr.phase === 'sA');
@@ -1176,13 +2133,13 @@
                 const auAnchor = n2.toWorld(n2.segs.leftPts[50]);
 
                 floatingLabels.push(
-                    { anchorPos: wAnchor, labelPos: makeMidCoilLabelPos(wAnchor, 1.14), title: '1. ЗИМА', sub: 'Сфираль I · виток 1', color: cW, seasonKey: 'winter' },
-                    { anchorPos: spAnchor, labelPos: makeMidCoilLabelPos(spAnchor, 1.14), title: '2. ВЕСНА', sub: 'Сфираль I · виток 2', color: cSp, seasonKey: 'spring' },
-                    { anchorPos: suAnchor, labelPos: makeMidCoilLabelPos(suAnchor, 1.14), title: '3. ЛЕТО', sub: 'Сфираль II · виток 1', color: cSu, seasonKey: 'summer' },
-                    { anchorPos: auAnchor, labelPos: makeMidCoilLabelPos(auAnchor, 1.14), title: '4. ОСЕНЬ', sub: 'Сфираль II · виток 2', color: cAu, seasonKey: 'autumn' }
+                    { anchorPos: wAnchor, labelPos: makeMidCoilLabelPos(wAnchor, 1.14), ...labelDefs[0] },
+                    { anchorPos: spAnchor, labelPos: makeMidCoilLabelPos(spAnchor, 1.14), ...labelDefs[1] },
+                    { anchorPos: suAnchor, labelPos: makeMidCoilLabelPos(suAnchor, 1.14), ...labelDefs[2] },
+                    { anchorPos: auAnchor, labelPos: makeMidCoilLabelPos(auAnchor, 1.14), ...labelDefs[3] }
                 );
             }
-            // Склеиваем весь маршрут в единую гладкую кривую CatmullRomCurve3 без ступенек на стыках сегментов
+
             if (flowPath.length > 1) {
                 const rawPts = flowPath.map(item => item.pos);
                 flowCurve = new THREE.CatmullRomCurve3(rawPts, false, 'catmullrom', 0.35);
@@ -1206,9 +2163,21 @@
                     return {
                         ...flowPath[bestIdx],
                         u,
-                        pos: pt
+                        pos: pt,
+                        distToCenter: pt.length()
                     };
                 });
+
+                for (let i = 1; i < flowSamples.length - 1; i++) {
+                    const prevD = flowSamples[i - 1].distToCenter;
+                    const currD = flowSamples[i].distToCenter;
+                    const nextD = flowSamples[i + 1].distToCenter;
+                    if (currD <= prevD && currD <= nextD && currD < 14.0) {
+                        if (centerUValues.length === 0 || Math.abs(flowSamples[i].u - centerUValues[centerUValues.length - 1]) > 0.08) {
+                            centerUValues.push(flowSamples[i].u);
+                        }
+                    }
+                }
             } else {
                 flowCurve = null;
                 flowSamples = flowPath.slice();
@@ -1258,6 +2227,20 @@
 
         const polePlusLocal = new THREE.Vector3(0, 0, 95);
         const poleMinusLocal = new THREE.Vector3(0, 0, -95);
+        const centerWorldOrigin = new THREE.Vector3(0, 0, 0);
+
+        function ensureCenterOutOfTimeDOM() {
+            let el = document.getElementById('lbl3d_center_oot');
+            if (!el) {
+                el = document.createElement('div');
+                el.className = 'label-3d';
+                el.id = 'lbl3d_center_oot';
+                el.style.borderColor = '#00ffaa';
+                el.innerHTML = `<strong style="color:#00ffaa"><i class="lbl-dot" style="background:#00ffaa; box-shadow:0 0 10px #00ffaa;"></i>ДЕНЬ ВНЕ ВРЕМЕНИ</strong><span>Центр инверсии (0, 0, 0)</span>`;
+                labelsLayer.appendChild(el);
+            }
+            return el;
+        }
 
         function ensureAxisPoleDOM() {
             let pPlus = document.getElementById('lbl3d_pole_plus');
@@ -1298,15 +2281,25 @@
             leaderLinesSvg.style.display = 'block';
             const halfW = window.innerWidth / 2;
             const halfH = window.innerHeight / 2;
+            const isMobile = window.innerWidth <= 768;
 
             modelRoot.updateMatrixWorld(true);
             const placedBoxes = [];
+
+            const isCompassOnly = state.colorMode === 'poles2';
 
             floatingLabels.forEach((m, i) => {
                 const el = document.getElementById(`lbl3d_${i}`);
                 const line = document.getElementById(`ldrLine_${i}`);
                 const dot = document.getElementById(`ldrDot_${i}`);
                 if (!el) return;
+
+                if (isCompassOnly) {
+                    el.style.opacity = '0';
+                    if (line) line.style.display = 'none';
+                    if (dot) dot.style.display = 'none';
+                    return;
+                }
 
                 const worldAnchor = m.anchorPos.clone().applyMatrix4(modelRoot.matrixWorld);
                 const worldLabel = m.labelPos.clone().applyMatrix4(modelRoot.matrixWorld);
@@ -1319,21 +2312,26 @@
                     if (line) line.style.display = 'none';
                     if (dot) dot.style.display = 'none';
                 } else {
-                    let lx = ptLabel.x;
-                    let ly = ptLabel.y;
+                    const padX = isMobile ? 54 : 80;
+                    const padYTop = isMobile ? 64 : 76;
+                    const padYBot = isMobile ? 168 : 138;
 
-                    // Мягкое разведение в 2D, если при каком-то ракурсе камеры две плашки сблизились
+                    let lx = Math.min(window.innerWidth - padX, Math.max(padX, ptLabel.x));
+                    let ly = Math.min(window.innerHeight - padYBot, Math.max(padYTop, ptLabel.y));
+
+                    const minDx = isMobile ? 96 : 138;
+                    const minDy = isMobile ? 34 : 46;
                     for (const box of placedBoxes) {
                         const dx = lx - box.x;
                         const dy = ly - box.y;
-                        if (Math.abs(dx) < 138 && Math.abs(dy) < 46) {
-                            ly += (dy >= 0 ? 1 : -1) * (48 - Math.abs(dy));
+                        if (Math.abs(dx) < minDx && Math.abs(dy) < minDy) {
+                            ly += (dy >= 0 ? 1 : -1) * (minDy + 2 - Math.abs(dy));
                         }
                     }
                     placedBoxes.push({ x: lx, y: ly });
 
-                    const isActive = m.seasonKey === activeSeasonKey;
-                    el.style.opacity = isActive ? '1' : '0.72';
+                    const isActive = !state.inOutOfTimeZone && m.seasonKey === activeSeasonKey;
+                    el.style.opacity = isActive ? '1' : '0.68';
                     el.style.left = `${lx}px`;
                     el.style.top = `${ly}px`;
                     el.style.boxShadow = isActive
@@ -1358,27 +2356,44 @@
                 }
             });
 
+            const centerEl = ensureCenterOutOfTimeDOM();
+            const ptCenter = projectAt(centerWorldOrigin, halfW, halfH);
+            if (ptCenter && (!isCompassOnly || state.inOutOfTimeZone) && (state.inOutOfTimeZone || state.showCore)) {
+                centerEl.style.left = `${ptCenter.x}px`;
+                centerEl.style.top = `${ptCenter.y - (isMobile ? 22 : 26)}px`;
+                centerEl.style.opacity = state.inOutOfTimeZone ? '1' : '0.45';
+                centerEl.classList.toggle('highlight', state.inOutOfTimeZone);
+                centerEl.style.boxShadow = state.inOutOfTimeZone
+                    ? '0 0 24px rgba(0, 255, 170, 0.7), 0 8px 24px rgba(0,0,0,0.75)'
+                    : '0 4px 14px rgba(0,0,0,0.5)';
+            } else {
+                centerEl.style.opacity = '0';
+            }
+
             const { pPlus, pMinus } = ensureAxisPoleDOM();
-            const showPoles = state.showPlane && state.mode === 'duplex';
+            const showPoles = isCompassOnly || (state.showPlane && state.mode === 'duplex');
             if (!showPoles) {
                 pPlus.style.opacity = '0';
                 pMinus.style.opacity = '0';
             } else {
-                activePlaneGroup.updateMatrixWorld(true);
-                const plusWorld = polePlusLocal.clone().applyMatrix4(activePlaneGroup.matrixWorld);
-                const minusWorld = poleMinusLocal.clone().applyMatrix4(activePlaneGroup.matrixWorld);
-                const isAutumn = activeSeasonKey === 'autumn';
-                const plusTitle = isAutumn ? 'N — Полюс Осени (Север)' : 'N — Полюс Весны (Север)';
-                const minusTitle = isAutumn ? 'S — Полюс Весны (Юг)' : 'S — Полюс Осени (Юг)';
-                const col = state.colorMode === 'poles2'
-                    ? '#ef4444'
-                    : (isAutumn ? getSeasonColorInfo('autumn').css : getSeasonColorInfo('spring').css);
+                const plusWorld = isCompassOnly
+                    ? new THREE.Vector3(0, 0, 82)
+                    : polePlusLocal.clone().applyMatrix4((activePlaneGroup.updateMatrixWorld(true), activePlaneGroup.matrixWorld));
+                const minusWorld = isCompassOnly
+                    ? new THREE.Vector3(0, 0, -82)
+                    : poleMinusLocal.clone().applyMatrix4(activePlaneGroup.matrixWorld);
+
+                const plusTitle = isCompassOnly ? 'N — СЕВЕРНЫЙ ПОЛЮС' : 'N — Полюс Севера';
+                const minusTitle = isCompassOnly ? 'S — ЮЖНЫЙ ПОЛЮС' : 'S — Полюс Юга';
+                const colPlus = '#ef4444';
+                const colMinus = '#3b82f6';
 
                 const ptPlus = projectAt(plusWorld, halfW, halfH);
                 if (ptPlus) {
                     pPlus.style.opacity = '1';
-                    pPlus.style.borderColor = col;
-                    pPlus.innerHTML = `<strong style="color:${col}">${plusTitle}</strong><span>Компас оси 90°</span>`;
+                    pPlus.style.borderColor = colPlus;
+                    pPlus.classList.toggle('highlight', isCompassOnly);
+                    pPlus.innerHTML = `<strong style="color:${colPlus}"><i class="lbl-dot" style="background:${colPlus}; box-shadow:0 0 8px ${colPlus};"></i>${plusTitle}</strong><span>Ось +Z · Направление компаса</span>`;
                     pPlus.style.left = `${ptPlus.x}px`;
                     pPlus.style.top = `${ptPlus.y}px`;
                 } else {
@@ -1388,8 +2403,9 @@
                 const ptMinus = projectAt(minusWorld, halfW, halfH);
                 if (ptMinus) {
                     pMinus.style.opacity = '1';
-                    pMinus.style.borderColor = col;
-                    pMinus.innerHTML = `<strong style="color:${col}">${minusTitle}</strong><span>Компас оси 90°</span>`;
+                    pMinus.style.borderColor = colMinus;
+                    pMinus.classList.toggle('highlight', isCompassOnly);
+                    pMinus.innerHTML = `<strong style="color:${colMinus}"><i class="lbl-dot" style="background:${colMinus}; box-shadow:0 0 8px ${colMinus};"></i>${minusTitle}</strong><span>Ось −Z · Противоположный полюс</span>`;
                     pMinus.style.left = `${ptMinus.x}px`;
                     pMinus.style.top = `${ptMinus.y}px`;
                 } else {
@@ -1398,7 +2414,289 @@
             }
         }
 
+
+        // =========================================================================
+        // ОБНОВЛЕНИЕ ЖИВОГО КОМПАСА ПО ПОВОРОТУ КАМЕРЫ ОТНОСИТЕЛЬНО МОДЕЛИ
+        // =========================================================================
+        const northAxisPoint = new THREE.Vector3(0, 0, 100);
+        const originAxisPoint = new THREE.Vector3(0, 0, 0);
+
+        function updateCompassNeedle() {
+            const rose = document.getElementById('compassRoseGroup');
+            const headingEl = document.getElementById('compassHeadingText');
+            const descEl = document.getElementById('compassViewDesc');
+            if (!rose) return;
+
+            // Вектор от камеры к центру модели и горизонтальный азимут камеры вокруг оси Y
+            const camOffset = camera.position.clone().sub(controls.target);
+            const horizDist = Math.hypot(camOffset.x, camOffset.z);
+
+            // Проецируем ось Севера (+Z) на экран, чтобы стрелка точно указывала на N на экране
+            const p0 = originAxisPoint.clone().project(camera);
+            const pN = northAxisPoint.clone().project(camera);
+            const dx = pN.x - p0.x;
+            const dy = pN.y - p0.y;
+            const projLen = Math.hypot(dx, dy);
+
+            let screenAngleDeg = 0;
+            if (projLen > 0.015) {
+                // В экранных координатах +Y вверх, +X вправо; угол по часовой от вертикали (12 часов)
+                screenAngleDeg = Math.atan2(dx, dy) * (180 / Math.PI);
+            } else {
+                // Если камера смотрит почти строго вдоль оси Z, берём угол по азимуту камеры
+                screenAngleDeg = Math.atan2(-camOffset.x, -camOffset.z) * (180 / Math.PI);
+            }
+
+            rose.setAttribute('transform', `rotate(${screenAngleDeg.toFixed(1)})`);
+
+            // Вычисляем азимут камеры (0°..359°) и ракурс
+            let azimuth = Math.round((Math.atan2(camOffset.x, camOffset.z) * 180 / Math.PI + 360) % 360);
+            const elevDeg = Math.round(Math.atan2(camOffset.y, Math.max(0.001, horizDist)) * 180 / Math.PI);
+
+            let sector = 'N (Север)';
+            if (azimuth >= 338 || azimuth < 23) sector = 'N (Север)';
+            else if (azimuth < 68) sector = 'NE (Сев.-Восток)';
+            else if (azimuth < 113) sector = 'E (Восток)';
+            else if (azimuth < 158) sector = 'SE (Юго-Восток)';
+            else if (azimuth < 203) sector = 'S (Юг)';
+            else if (azimuth < 248) sector = 'SW (Юго-Запад)';
+            else if (azimuth < 293) sector = 'W (Запад)';
+            else sector = 'NW (Сев.-Запад)';
+
+            if (headingEl) {
+                headingEl.textContent = `КОМПАС · ${azimuth}° ${sector}`;
+            }
+            if (descEl) {
+                let viewText = 'Боковой обзор';
+                if (elevDeg > 60) viewText = 'Вид сверху';
+                else if (elevDeg < -60) viewText = 'Вид снизу';
+                else if (Math.abs(elevDeg) <= 15) viewText = 'Горизонт';
+                descEl.textContent = `${viewText} (наклон ${elevDeg}°) · Камера → Модель`;
+            }
+        }
+
+        // =========================================================================
+        // 6. ИНИЦИАЛИЗАЦИЯ ВИДЖЕТОВ НЕДЕЛИ, МЕСЯЦА И 20 ПЕЧАТЕЙ ЦОЛЬКИНА
+        // =========================================================================
         let currentSeasonKey = 'winter';
+        let lastRenderedMonth = -1;
+        let lastRenderedDay = -1;
+        let lastRenderedSealIdx = -1;
+        let lastRenderedTone = -1;
+
+        const inpGregDate = document.getElementById('inpGregDate');
+        const panelWeekdayStrip = document.getElementById('panelWeekdayStrip');
+        const bottomWeekdayBar = document.getElementById('bottomWeekdayBar');
+        const panelMonthGrid = document.getElementById('panelMonthGrid');
+        const sealsMatrixGrid = document.getElementById('sealsMatrixGrid');
+
+        function stepGregorianDays(deltaDays) {
+            const normT = ((state.t % 1.0) + 1.0) % 1.0;
+            const greg = getGregorianFromT(normT);
+            let nextDoy = ((greg.doy - 1 + deltaDays) % 365 + 365) % 365 + 1;
+            state.t = getTFromDoy(nextDoy);
+            rngTimeline.value = state.t.toFixed(3);
+            updateFlowVisuals(0.15);
+        }
+
+        function stepTzolkinKins(deltaKins) {
+            const normT = ((state.t % 1.0) + 1.0) % 1.0;
+            const tzol = getTzolkinFromT(normT);
+            const nextKin = ((tzol.kin + deltaKins) % 260 + 260) % 260;
+            state.t = (nextKin + 0.5) / 260;
+            rngTimeline.value = state.t.toFixed(3);
+            updateFlowVisuals(0.15);
+        }
+
+        function initCalendarWidgets() {
+            // 1. Полоски дней недели (в правой панели и в нижней плашке)
+            panelWeekdayStrip.innerHTML = '';
+            bottomWeekdayBar.innerHTML = '';
+            WEEKDAYS_SHORT.forEach((wd, idx) => {
+                const isWeekend = idx >= 5;
+
+                const cell = document.createElement('button');
+                cell.className = `wd-cell${isWeekend ? ' weekend' : ''}`;
+                cell.textContent = wd;
+                cell.title = WEEKDAYS_FULL[idx];
+                cell.addEventListener('click', () => {
+                    const normT = ((state.t % 1.0) + 1.0) % 1.0;
+                    const greg = getGregorianFromT(normT);
+                    const diff = idx - greg.wdIdx;
+                    stepGregorianDays(diff);
+                });
+                panelWeekdayStrip.appendChild(cell);
+
+                const miniBtn = document.createElement('button');
+                miniBtn.className = `mini-wd-btn${isWeekend ? ' weekend' : ''}`;
+                miniBtn.textContent = wd;
+                miniBtn.title = WEEKDAYS_FULL[idx];
+                miniBtn.addEventListener('click', () => {
+                    const normT = ((state.t % 1.0) + 1.0) % 1.0;
+                    const greg = getGregorianFromT(normT);
+                    const diff = idx - greg.wdIdx;
+                    stepGregorianDays(diff);
+                });
+                bottomWeekdayBar.appendChild(miniBtn);
+            });
+
+            // 2. Матрица 20 печатей Цолькина
+            sealsMatrixGrid.innerHTML = '';
+            TZOLKIN_SEALS.forEach((seal, idx) => {
+                const tile = document.createElement('div');
+                tile.className = 'seal-tile';
+                tile.style.borderColor = `${seal.color}44`;
+                tile.title = `${idx + 1}. ${seal.maya} (${seal.ru}) — ${seal.dir}`;
+                tile.innerHTML = `${seal.svg}<span>${seal.maya}</span>`;
+                tile.addEventListener('click', () => {
+                    const normT = ((state.t % 1.0) + 1.0) % 1.0;
+                    const tzol = getTzolkinFromT(normT);
+                    // Подбираем ближайший Кин с выбранной печатью
+                    let bestKin = idx;
+                    let minDist = 999;
+                    for (let k = idx; k < 260; k += 20) {
+                        const d = Math.abs(k - tzol.kin);
+                        if (d < minDist) {
+                            minDist = d;
+                            bestKin = k;
+                        }
+                    }
+                    state.t = (bestKin + 0.5) / 260;
+                    rngTimeline.value = state.t.toFixed(3);
+                    updateFlowVisuals(0.15);
+                });
+                sealsMatrixGrid.appendChild(tile);
+            });
+        }
+
+        function renderMonthGrid(monthIdx, activeDay) {
+            if (monthIdx === lastRenderedMonth && activeDay === lastRenderedDay) return;
+            lastRenderedMonth = monthIdx;
+            lastRenderedDay = activeDay;
+
+            // Первый день месяца в 2026 году
+            let firstDoy = 1;
+            for (let m = 0; m < monthIdx; m++) firstDoy += MONTHS_DAYS[m];
+            const firstWd = (YEAR_START_WD_2026 + (firstDoy - 1)) % 7;
+            const daysInMonth = MONTHS_DAYS[monthIdx];
+
+            let html = '';
+            for (let e = 0; e < firstWd; e++) {
+                html += `<div class="mm-day empty">.</div>`;
+            }
+            for (let d = 1; d <= daysInMonth; d++) {
+                const wd = (firstWd + d - 1) % 7;
+                const isWeekend = wd >= 5;
+                const isActive = d === activeDay;
+                const doy = firstDoy + d - 1;
+                html += `<div class="mm-day${isWeekend ? ' weekend' : ''}${isActive ? ' active' : ''}" data-doy="${doy}">${d}</div>`;
+            }
+            panelMonthGrid.innerHTML = html;
+
+            panelMonthGrid.querySelectorAll('.mm-day[data-doy]').forEach(el => {
+                el.addEventListener('click', () => {
+                    const doy = parseInt(el.dataset.doy, 10);
+                    state.t = getTFromDoy(doy);
+                    rngTimeline.value = state.t.toFixed(3);
+                    updateFlowVisuals(0.15);
+                });
+            });
+        }
+
+        function updateCalendarDisplays(normT, seasonKey, isCenterZone) {
+            const greg = getGregorianFromT(normT);
+            const tzol = getTzolkinFromT(normT);
+
+            const seasonNames = {
+                winter: '1. Зима',
+                spring: '2. Весна',
+                summer: '3. Лето',
+                autumn: '4. Осень'
+            };
+
+            // Обновление подсветки дней недели (верхняя/правая и нижняя полоски)
+            const panelWdCells = panelWeekdayStrip.children;
+            const bottomWdBtns = bottomWeekdayBar.children;
+            for (let i = 0; i < 7; i++) {
+                const isAct = !isCenterZone && i === greg.wdIdx;
+                if (panelWdCells[i]) {
+                    panelWdCells[i].classList.toggle('active', isAct);
+                    panelWdCells[i].classList.toggle('oot-day', isCenterZone && i === greg.wdIdx);
+                }
+                if (bottomWdBtns[i]) {
+                    bottomWdBtns[i].classList.toggle('active', isAct);
+                }
+            }
+
+            // Мини-календарь месяца
+            renderMonthGrid(greg.monthIdx, greg.day);
+
+            // Обновление карточки Печати Цолькина + Тона майя
+            if (tzol.sealIdx !== lastRenderedSealIdx || tzol.tone !== lastRenderedTone) {
+                lastRenderedSealIdx = tzol.sealIdx;
+                lastRenderedTone = tzol.tone;
+
+                const heroCard = document.getElementById('tzolkinHeroCard');
+                const heroGlyph = document.getElementById('heroGlyphBox');
+                heroCard.style.borderColor = `${tzol.seal.color}77`;
+                heroGlyph.style.borderColor = tzol.seal.color;
+                heroGlyph.innerHTML = tzol.seal.svg;
+
+                document.getElementById('heroKinTitle').textContent = `Кин ${tzol.kinNum} · ${tzol.toneName} ${tzol.seal.maya}`;
+                document.getElementById('heroKinTitle').style.color = tzol.seal.color;
+                document.getElementById('heroSealSub').textContent = `Печать: ${tzol.seal.ru} · ${tzol.seal.dir}`;
+                document.getElementById('heroMayaNumeral').innerHTML = renderMayaNumeralHTML(tzol.tone, tzol.seal.color);
+                document.getElementById('heroToneName').textContent = `Тон ${tzol.tone} / 13`;
+
+                const bottomIcon = document.getElementById('bottomSealIcon');
+                bottomIcon.style.borderColor = tzol.seal.color;
+                bottomIcon.innerHTML = tzol.seal.svg;
+                document.getElementById('bottomSealText').textContent = `${tzol.tone} ${tzol.seal.maya}`;
+                document.getElementById('bottomSealText').style.color = tzol.seal.color;
+
+                const tiles = sealsMatrixGrid.children;
+                for (let i = 0; i < tiles.length; i++) {
+                    const active = i === tzol.sealIdx;
+                    tiles[i].classList.toggle('active', active);
+                    tiles[i].style.borderColor = active ? tzol.seal.color : `${TZOLKIN_SEALS[i].color}44`;
+                }
+            }
+
+            // Нижняя строка-индикатор
+            const readout = document.getElementById('calendarReadout');
+            if (isCenterZone) {
+                readout.innerHTML = `
+                    <span class="cal-badge" style="color:#00ffaa; border-color:#00ffaa; background:rgba(0,255,170,0.16);">✨ ДЕНЬ ВНЕ ВРЕМЕНИ · Центр (0, 0, 0)</span>
+                    <span style="color:#e9d5ff;">${greg.wdShort}, ${greg.label} · Кин ${tzol.kinNum}/260</span>
+                `;
+            } else if (state.calendarMode === 'gregorian') {
+                readout.innerHTML = `
+                    <span class="cal-badge" style="color:#7dd3fc; border-color:rgba(125,211,252,0.5);">📅 ${greg.wdFull}, ${greg.label} · Нед. ${greg.weekNum}</span>
+                    <span>День ${greg.doy}/365 · ${seasonNames[seasonKey]}</span>
+                `;
+            } else if (state.calendarMode === 'tzolkin') {
+                readout.innerHTML = `
+                    <span class="cal-badge" style="color:${tzol.seal.color}; border-color:${tzol.seal.color};">🌀 Кин ${tzol.kinNum}/260: ${tzol.toneName} ${tzol.seal.maya} (${tzol.seal.ru})</span>
+                    <span>${greg.wdShort}, ${greg.label}</span>
+                `;
+            } else {
+                readout.innerHTML = `
+                    <span class="cal-badge">${greg.wdShort}, ${greg.label} · День ${greg.doy}/365</span>
+                    <span>Кин ${tzol.kinNum}/260</span>
+                `;
+            }
+
+            document.getElementById('panelCalTitle').textContent = isCenterZone
+                ? `✨ День вне времени · Центр (0, 0, 0)`
+                : `${greg.wdFull}, ${greg.label}`;
+            document.getElementById('panelWeekBadge').textContent = `Нед. ${greg.weekNum}`;
+            document.getElementById('panelCalDetails').textContent =
+                `${greg.monthTitle} · День ${greg.doy} из 365 · ${seasonNames[seasonKey]}`;
+
+            if (document.activeElement !== inpGregDate) {
+                inpGregDate.value = greg.iso;
+            }
+        }
 
         function updateFlowVisuals(dt) {
             if (flowSamples.length === 0) return;
@@ -1406,16 +2704,39 @@
             const normT = ((state.t % 1.0) + 1.0) % 1.0;
             const exactIdx = normT * (total - 1);
             const headIdx = Math.min(total - 1, Math.max(0, Math.floor(exactIdx)));
-            const current = flowCurve
-                ? {
-                    ...flowSamples[headIdx],
-                    pos: flowCurve.getPointAt(normT)
-                  }
-                : flowSamples[headIdx];
+            const pos = flowCurve ? flowCurve.getPointAt(normT) : flowSamples[headIdx].pos;
+            const current = {
+                ...flowSamples[headIdx],
+                pos
+            };
             currentSeasonKey = current.seasonKey;
 
-            // Обновляем комету: голова идёт строго по непрерывной кривой, хвост тянется назад без перескока через край
-            const headColor = new THREE.Color(current.color);
+            const distToOrigin = current.pos.length();
+            const isCenterZone = distToOrigin < 15.0;
+            state.inOutOfTimeZone = isCenterZone;
+
+            document.getElementById('bottomBar').classList.toggle('oot-active', isCenterZone);
+            document.getElementById('btnBottomOutOfTime').classList.toggle('active', isCenterZone);
+            document.getElementById('btnJumpOutOfTime').classList.toggle('active', isCenterZone);
+
+            if (isCenterZone) {
+                const factor = 1.0 - Math.min(1, distToOrigin / 15.0);
+                coreSphereMat.color.setHex(0xffffff).lerp(new THREE.Color(0x00ffaa), 0.35);
+                coreHaloMat.color.setHex(0xc084fc);
+                coreHaloMat.opacity = 0.35 + factor * 0.45;
+                coreRingMat.opacity = 0.55 + factor * 0.4;
+                coreSphere.scale.setScalar(1.0 + factor * 0.55);
+                coreRing.scale.setScalar(1.0 + factor * 0.45);
+            } else {
+                coreSphereMat.color.setHex(0x00ffaa);
+                coreHaloMat.color.setHex(0x00ffaa);
+                coreHaloMat.opacity = 0.25;
+                coreRingMat.opacity = 0.22;
+                coreSphere.scale.setScalar(1.0);
+                coreRing.scale.setScalar(1.0);
+            }
+
+            const headColor = isCenterZone ? new THREE.Color(0x00ffaa) : new THREE.Color(current.color);
             const fadedTailColor = new THREE.Color(0x1e293b);
             for (let i = 0; i < trailCount; i++) {
                 const item = trailMeshes[i];
@@ -1438,7 +2759,6 @@
                 }
             }
 
-            // Насыщенные контурные линии сезонов
             const setRailTone = (mat, active, hexColor) => {
                 if (!mat) return;
                 mat.color.set(hexColor);
@@ -1460,36 +2780,56 @@
                 setRailTone(segmentMaterials.s4, current.seasonKey === 'autumn', getSeasonColorInfo('autumn').hex);
             }
 
-            // Плавный поворот круга активной плоскости (как рамка гироскопа)
             activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
             const targetRotY = current.planeRotY;
             activePlaneGroup.rotation.y += (targetRotY - activePlaneGroup.rotation.y) * Math.min(1, dt * 6);
-            ringMat.color.set(current.color);
-            discMat.color.set(current.color);
-            axisMat.color.set(current.color);
-            crossAxisMat.color.set(current.color);
+            ringMat.color.set(isCenterZone ? '#00ffaa' : current.color);
+            discMat.color.set(isCenterZone ? '#00ffaa' : current.color);
+            axisMat.color.set(isCenterZone ? '#00ffaa' : current.color);
+            crossAxisMat.color.set(isCenterZone ? '#00ffaa' : current.color);
 
-            // Если включено «Следить за сезоном» — плавно поворачиваем камеру вслед за активной плоскостью
-            if (state.camFollow && state.playing && state.autoRotate === 'off') {
+            if (state.camFollow && state.playing) {
                 camera.position.lerp(current.camPos, Math.min(1, dt * 1.8));
                 controls.target.lerp(new THREE.Vector3(0, 0, 0), Math.min(1, dt * 4));
             }
 
-            // Субтитр и подсветка кнопок сезонов внизу
-            document.getElementById('subtitleText').innerHTML = current.subtitle;
+            updateCalendarDisplays(normT, current.seasonKey, isCenterZone);
+            document.getElementById('subtitleText').innerHTML = isCenterZone
+                ? `<strong style="color:#00ffaa;">✨ ДЕНЬ ВНЕ ВРЕМЕНИ · ЦЕНТР (0, 0, 0):</strong> Точка инверсии S-петли — переход между витками без разрыва потока.`
+                : current.subtitle;
+
             const seasonOrder = ['winter', 'spring', 'summer', 'autumn'];
             document.querySelectorAll('.season-pill').forEach((pill, idx) => {
-                pill.classList.toggle('active', seasonOrder[idx] === current.seasonKey);
+                pill.classList.toggle('active', !isCenterZone && seasonOrder[idx] === current.seasonKey);
             });
         }
 
         // =========================================================================
-        // 5. УПРАВЛЕНИЕ И СОБЫТИЯ
+        // 7. УПРАВЛЕНИЕ, МОБИЛЬНАЯ ВЁРСТКА И СОБЫТИЯ
         // =========================================================================
+        function syncResponsiveLayout() {
+            const topBar = document.getElementById('topBar');
+            const bottomBar = document.getElementById('bottomBar');
+            const compassHud = document.getElementById('compassHud');
+            const topOffset = (topBar ? topBar.offsetHeight : 48) + 16;
+            const botOffset = (bottomBar ? bottomBar.offsetHeight : 114) + 16;
+            if (compassHud) {
+                compassHud.style.top = `${topOffset}px`;
+            }
+
+            document.querySelectorAll('.side-panel').forEach(p => {
+                p.style.top = `${topOffset}px`;
+                p.style.bottom = `${botOffset}px`;
+            });
+            document.querySelectorAll('.panel-toggle-tab').forEach(tab => {
+                tab.style.top = `${topOffset}px`;
+            });
+        }
+
         const btnTour = document.getElementById('btnTourToggle');
         function setPlaying(play) {
             state.playing = play;
-            btnTour.textContent = play ? '⏸ Пауза тура (Пробел)' : '▶ Продолжить тур (Пробел)';
+            btnTour.textContent = play ? '⏸ Пауза' : '▶ Старт';
             btnTour.classList.toggle('playing', play);
         }
         btnTour.addEventListener('click', () => setPlaying(!state.playing));
@@ -1498,6 +2838,10 @@
             if (e.code === 'Space') {
                 e.preventDefault();
                 setPlaying(!state.playing);
+            } else if (e.code === 'ArrowRight') {
+                stepGregorianDays(1);
+            } else if (e.code === 'ArrowLeft') {
+                stepGregorianDays(-1);
             }
         });
 
@@ -1509,15 +2853,87 @@
             btnDuplex.classList.toggle('active', mode === 'duplex');
             state.nodes = JSON.parse(JSON.stringify(mode === 'single' ? SINGLE_NODES : DUPLEX_NODES));
             activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
-        applyColorPaletteToUI();
-        rebuildScene();
+            applyColorPaletteToUI();
+            rebuildScene();
         }
         btnSingle.addEventListener('click', () => setMode('single'));
         btnDuplex.addEventListener('click', () => setMode('duplex'));
 
+        function setCalendarMode(calMode) {
+            state.calendarMode = calMode;
+            document.querySelectorAll('[data-calmode]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.calmode === calMode);
+            });
+            rebuildScene();
+            syncResponsiveLayout();
+        }
+        document.querySelectorAll('[data-calmode]').forEach(btn => {
+            btn.addEventListener('click', () => setCalendarMode(btn.dataset.calmode));
+        });
+
+        // Пошаговые кнопки дней и Кинов
+        document.getElementById('btnPrevDay').addEventListener('click', () => stepGregorianDays(-1));
+        document.getElementById('btnNextDay').addEventListener('click', () => stepGregorianDays(1));
+        document.getElementById('btnBottomPrevDay').addEventListener('click', () => stepGregorianDays(-1));
+        document.getElementById('btnBottomNextDay').addEventListener('click', () => stepGregorianDays(1));
+        document.getElementById('btnPrevKin').addEventListener('click', () => stepTzolkinKins(-1));
+        document.getElementById('btnNextKin').addEventListener('click', () => stepTzolkinKins(1));
+
+        // Клик по бейджу печати в нижней панели открывает правую панель с матрицей 20 печатей
+        document.getElementById('bottomSealPill').addEventListener('click', () => {
+            setCalendarMode('tzolkin');
+            setPanelCollapsed('right', false);
+        });
+
+        // Прыжок в центральный узел инверсии (День вне времени)
+        const rngTimeline = document.getElementById('rngTimeline');
+        function jumpToOutOfTimeCenter() {
+            if (centerUValues.length > 0) {
+                const normT = ((state.t % 1.0) + 1.0) % 1.0;
+                let targetU = centerUValues[0];
+                for (let i = 0; i < centerUValues.length; i++) {
+                    if (centerUValues[i] > normT + 0.02) {
+                        targetU = centerUValues[i];
+                        break;
+                    }
+                }
+                state.t = targetU;
+            } else {
+                state.t = 0.25;
+            }
+            rngTimeline.value = state.t.toFixed(3);
+            setPlaying(false);
+            state.camFollow = false;
+            updateCamFollowBtn();
+            controls.target.set(0, 0, 0);
+            camera.position.set(85, 65, 135);
+            controls.update();
+            updateFlowVisuals(0.2);
+            if (window.innerWidth <= 900) setPanelCollapsed('right', true);
+        }
+        document.getElementById('btnJumpOutOfTime').addEventListener('click', jumpToOutOfTimeCenter);
+        document.getElementById('btnBottomOutOfTime').addEventListener('click', jumpToOutOfTimeCenter);
+
+        inpGregDate.addEventListener('change', (e) => {
+            if (!e.target.value) return;
+            const parts = e.target.value.split('-').map(Number);
+            if (parts.length === 3) {
+                const d = new Date(parts[0], parts[1] - 1, parts[2]);
+                state.t = getTFromDate(d);
+                rngTimeline.value = state.t.toFixed(3);
+                updateFlowVisuals(0.2);
+            }
+        });
+        document.getElementById('btnTodayDate').addEventListener('click', () => {
+            const now = new Date();
+            state.t = getTFromDate(now);
+            rngTimeline.value = state.t.toFixed(3);
+            updateFlowVisuals(0.2);
+        });
+
         const btnCamFollow = document.getElementById('btnCamFollow');
         function updateCamFollowBtn() {
-            btnCamFollow.textContent = state.camFollow ? '🎥 Следить за сезоном: ВКЛ' : '🎥 Следить за сезоном: ВЫКЛ';
+            btnCamFollow.textContent = state.camFollow ? '🎥 Камера: ВКЛ' : '🎥 Камера: ВЫКЛ';
             btnCamFollow.style.color = state.camFollow ? '#00ffaa' : '#94a3b8';
         }
         updateCamFollowBtn();
@@ -1533,12 +2949,21 @@
         const toggleRightTab = document.getElementById('toggleRightTab');
 
         function setPanelCollapsed(side, collapsed) {
+            const isMobile = window.innerWidth <= 900;
             if (side === 'left') {
                 leftPanel.classList.toggle('collapsed', collapsed);
                 toggleLeftTab.style.display = collapsed ? 'block' : 'none';
+                if (!collapsed && isMobile) {
+                    rightPanel.classList.add('collapsed');
+                    toggleRightTab.style.display = 'block';
+                }
             } else {
                 rightPanel.classList.toggle('collapsed', collapsed);
                 toggleRightTab.style.display = collapsed ? 'block' : 'none';
+                if (!collapsed && isMobile) {
+                    leftPanel.classList.add('collapsed');
+                    toggleLeftTab.style.display = 'block';
+                }
             }
         }
         document.getElementById('collapseLeftBtn').addEventListener('click', () => setPanelCollapsed('left', true));
@@ -1565,23 +2990,40 @@
                 if (c === 'iso') camera.position.set(165, 125, 205);
                 if (c === 'top') camera.position.set(0, 260, 0.1);
                 if (c === 'side') camera.position.set(250, 0, 0);
+                if (c === 'center') camera.position.set(85, 65, 135);
                 controls.update();
+                if (window.innerWidth <= 900) setPanelCollapsed('left', true);
             });
         });
 
-        // Ползунок растяжения
-
-        // Скорость и вращение
+        // Скорость течения дней
+        function setFlowSpeed(val) {
+            state.speed = val;
+            document.getElementById('rngSpeed').value = val;
+            const secPerDay = (1 / (365 * 0.0045 * val)).toFixed(1);
+            document.getElementById('valSpeed').textContent = `${val.toFixed(2)}× (~${secPerDay}с/день)`;
+            document.querySelectorAll('[data-speedpreset]').forEach(b => {
+                b.classList.toggle('active', Math.abs(parseFloat(b.dataset.speedpreset) - val) < 0.01);
+            });
+        }
         document.getElementById('rngSpeed').addEventListener('input', (e) => {
-            state.speed = parseFloat(e.target.value);
-            document.getElementById('valSpeed').textContent = state.speed.toFixed(1) + '×';
+            setFlowSpeed(parseFloat(e.target.value));
         });
-        document.querySelectorAll('[data-rot]').forEach(btn => {
+        document.querySelectorAll('[data-speedpreset]').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('[data-rot]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                state.autoRotate = btn.dataset.rot;
+                setFlowSpeed(parseFloat(btn.dataset.speedpreset));
             });
+        });
+
+        // Клик по компасу переключает режим выделения полюсов N–S и 4 сезонов
+        document.getElementById('compassHud').addEventListener('click', () => {
+            const nextMode = state.colorMode === 'poles2' ? 'seasons4' : 'poles2';
+            state.colorMode = nextMode;
+            document.querySelectorAll('[data-colormode]').forEach(b => {
+                b.classList.toggle('active', b.dataset.colormode === nextMode);
+            });
+            applyColorPaletteToUI();
+            rebuildScene();
         });
         document.querySelectorAll('[data-colormode]').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -1589,7 +3031,7 @@
                 btn.classList.add('active');
                 state.colorMode = btn.dataset.colormode;
                 applyColorPaletteToUI();
-                        activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
+                activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
                 rebuildScene();
             });
         });
@@ -1599,7 +3041,7 @@
             state.tubeRadius = parseFloat(e.target.value);
             document.getElementById('valTube').textContent = state.tubeRadius.toFixed(1);
             activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
-        rebuildScene();
+            rebuildScene();
         });
         document.getElementById('rngBloom').addEventListener('input', (e) => {
             state.bloomStrength = parseFloat(e.target.value);
@@ -1611,7 +3053,7 @@
             state.glassOpacity = pct / 100;
             document.getElementById('valGlass').textContent = pct + '%';
             activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
-        rebuildScene();
+            rebuildScene();
         });
 
         // Переключатели подсказок
@@ -1629,7 +3071,6 @@
         bindSwitch('tglCore', 'showCore', (v) => { coreGroup.visible = v; });
 
         // Шкала времени и кнопки сезонов
-        const rngTimeline = document.getElementById('rngTimeline');
         rngTimeline.addEventListener('input', (e) => {
             state.t = parseFloat(e.target.value);
             updateFlowVisuals(0.05);
@@ -1647,11 +3088,13 @@
         });
 
         // =========================================================================
-        // 6. ГЛАВНЫЙ ЦИКЛ
+        // 8. ГЛАВНЫЙ ЦИКЛ
         // =========================================================================
         const clock = new THREE.Clock();
+        initCalendarWidgets();
         activePlaneGroup.visible = state.showPlane && state.mode === 'duplex';
         rebuildScene();
+        syncResponsiveLayout();
 
         function animate() {
             requestAnimationFrame(animate);
@@ -1659,21 +3102,17 @@
             const elapsed = clock.getElapsedTime();
 
             if (state.playing) {
-                state.t = (state.t + dt * state.speed * 0.022) % 1.0;
+                state.t = (state.t + dt * state.speed * 0.0045) % 1.0;
                 rngTimeline.value = state.t.toFixed(3);
             }
 
-            if (state.autoRotate === 'y') {
-                modelRoot.rotation.y += dt * 0.5;
-            } else if (state.autoRotate === '3d') {
-                modelRoot.rotation.y += dt * 0.4;
-                modelRoot.rotation.x = Math.sin(elapsed * 0.6) * 0.3;
-            }
-
-            coreHalo.scale.setScalar(1.0 + Math.sin(elapsed * 3.0) * 0.16);
+            const pulseBase = state.inOutOfTimeZone ? 1.35 : 1.0;
+            coreHalo.scale.setScalar(pulseBase + Math.sin(elapsed * 3.5) * 0.2);
+            coreRing.rotation.z = elapsed * 0.8;
 
             updateFlowVisuals(dt);
             controls.update();
+            updateCompassNeedle();
             updateProjectedLabels(currentSeasonKey);
             composer.render();
         }
@@ -1683,6 +3122,7 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
             composer.setSize(window.innerWidth, window.innerHeight);
+            syncResponsiveLayout();
         });
 
         animate();
